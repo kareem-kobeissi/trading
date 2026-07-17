@@ -1,0 +1,209 @@
+================================================================================
+Email Sent: 2026-03-14 13:33:34
+From: support@thetradingroutine.com
+To: kbkareem31@gmail.com
+Subject: Payment Receipt - Order ORD-1773491612325-9sp90dzo4
+---
+Hello eff,
+
+Thank you for your purchase! Here is your payment receipt:
+
+━━━━━━━━━━━━━━━━━━━━━━━
+PAYMENT RECEIPT
+━━━━━━━━━━━━━━━━━━━━━━━
+
+Order ID: ORD-1773491612325-9sp90dzo4
+Customer Name: eff
+Email: kbkareem31@gmail.com
+Phone: 32332323
+Total Amount: $303.00 USD
+Date: March 14, 2026
+Time: 02:33 PM
+
+Product: Trading Mastery Courses
+
+━━━━━━━━━━━━━━━━━━━━━━━
+
+If you have any questions, please contact us at:
+Email: support@thetradingroutine.com
+WhatsApp: +961 71 493 997
+
+Best regards,
+The Trading Routine Team
+================================================================================
+
+================================================================================
+Email Logged (SMTP Failed): 2026-03-14 13:42:30
+Error: SMTP Authentication failed
+From: support@thetradingroutine.com
+To: kbkareem31@gmail.com
+Subject: Payment Receipt - Order ORD-1773492145628-nvegxqzk5
+---
+Hello rfrf,
+
+Thank you for your purchase! Here is your payment receipt:
+
+━━━━━━━━━━━━━━━━━━━━━━━
+PAYMENT RECEIPT
+━━━━━━━━━━━━━━━━━━━━━━━
+
+Order ID: ORD-1773492145628-nvegxqzk5
+Customer Name: rfrf
+Email: kbkareem31@gmail.com
+Phone: 343443
+Total Amount: $303.00 USD
+Date: March 14, 2026
+Time: 02:42 PM
+
+Product: Trading Mastery Courses
+
+━━━━━━━━━━━━━━━━━━━━━━━
+
+If you have any questions, please contact us at:
+Email: support@thetradingroutine.com
+WhatsApp: +961 71 493 997
+
+Best regards,
+The Trading Routine Team
+================================================================================
+
+================================================================================
+Email Logged (SMTP Failed): 2026-03-14 13:44:38
+Error: SMTP Authentication failed - Check username/password
+From: support@thetradingroutine.com
+To: kbkareem31@gmail.com
+Subject: Payment Receipt - Order ORD-1773492273744-qem86gfk6
+---
+Hello kjjkjk,
+
+Thank you for your purchase! Here is your payment receipt:
+
+━━━━━━━━━━━━━━━━━━━━━━━
+PAYMENT RECEIPT
+━━━━━━━━━━━━━━━━━━━━━━━
+
+Order ID: ORD-1773492273744-qem86gfk6
+Customer Name: kjjkjk
+Email: kbkareem31@gmail.com
+Phone: 988898989
+Total Amount: $303.00 USD
+Date: March 14, 2026
+Time: 02:44 PM
+
+Product: Trading Mastery Courses
+
+━━━━━━━━━━━━━━━━━━━━━━━
+
+If you have any questions, please contact us at:
+Email: support@thetradingroutine.com
+WhatsApp: +961 71 493 997
+
+Best regards,
+The Trading Routine Team
+================================================================================
+
+================================================================================
+Email Logged (SMTP Failed): 2026-03-14 13:46:13
+Error: SMTP Authentication failed - Check username/password
+From: support@thetradingroutine.com
+To: kbkareem31@gmail.com
+Subject: Payment Receipt - Order ORD-1773492368402-nbyv84ipw
+---
+Hello tgtg,
+
+Thank you for your purchase! Here is your payment receipt:
+
+━━━━━━━━━━━━━━━━━━━━━━━
+PAYMENT RECEIPT
+━━━━━━━━━━━━━━━━━━━━━━━
+
+Order ID: ORD-1773492368402-nbyv84ipw
+Customer Name: tgtg
+Email: kbkareem31@gmail.com
+Phone: 8777878
+Total Amount: $303.00 USD
+Date: March 14, 2026
+Time: 02:46 PM
+
+Product: Trading Mastery Courses
+
+━━━━━━━━━━━━━━━━━━━━━━━
+
+If you have any questions, please contact us at:
+Email: support@thetradingroutine.com
+WhatsApp: +961 71 493 997
+
+Best regards,
+The Trading Routine Team
+================================================================================
+
+================================================================================
+Email Logged (SMTP Failed): 2026-03-14 13:47:51
+Error: SMTP Authentication failed - Check username/password
+From: support@thetradingroutine.com
+To: kareemkobeissi2@gmail.com
+Subject: Payment Receipt - Order ORD-1773492465825-qvz5xv637
+---
+Hello eff,
+
+Thank you for your purchase! Here is your payment receipt:
+
+━━━━━━━━━━━━━━━━━━━━━━━
+PAYMENT RECEIPT
+━━━━━━━━━━━━━━━━━━━━━━━
+
+Order ID: ORD-1773492465825-qvz5xv637
+Customer Name: eff
+Email: kareemkobeissi2@gmail.com
+Phone: 87788778
+Total Amount: $303.00 USD
+Date: March 14, 2026
+Time: 02:47 PM
+
+Product: Trading Mastery Courses
+
+━━━━━━━━━━━━━━━━━━━━━━━
+
+If you have any questions, please contact us at:
+Email: support@thetradingroutine.com
+WhatsApp: +961 71 493 997
+
+Best regards,
+The Trading Routine Team
+================================================================================
+
+================================================================================
+Email Logged (SMTP Error): 2026-03-14 14:04:13
+Error: Failed to establish TLS connection
+From: support@thetradingroutine.com
+To: kbkareem31@gmail.com
+Subject: Payment Receipt - Order ORD-1773493450475-bz8xlw5ak
+---
+Hello yhhy,
+
+Thank you for your purchase! Here is your payment receipt:
+
+━━━━━━━━━━━━━━━━━━━━━━━
+PAYMENT RECEIPT
+━━━━━━━━━━━━━━━━━━━━━━━
+
+Order ID: ORD-1773493450475-bz8xlw5ak
+Customer Name: yhhy
+Email: kbkareem31@gmail.com
+Phone: 988898989
+Total Amount: $303.00 USD
+Date: March 14, 2026
+Time: 03:04 PM
+
+Product: Trading Mastery Courses
+
+━━━━━━━━━━━━━━━━━━━━━━━
+
+If you have any questions, please contact us at:
+Email: support@thetradingroutine.com
+WhatsApp: +961 71 493 997
+
+Best regards,
+The Trading Routine Team
+================================================================================
+

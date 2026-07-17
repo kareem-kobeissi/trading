@@ -1,0 +1,21 @@
+# Runtime logs and diagnostics
+*.log
+logs/
+db_out.txt
+
+# Local environment and database files
+.env
+.env.*
+*.sqlite
+*.sqlite3
+*.db
+
+# Temporary and editor files
+tmp_*
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
+
+# Local rollback copy
+checkout.before-simple-payment.php

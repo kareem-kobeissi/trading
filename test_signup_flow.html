@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Signup Flow Test</title>
+</head>
+<body>
+    <h1>Testing Signup Flow</h1>
+    <form id="testForm">
+        <input type="text" id="username" placeholder="Username" value="TestUser">
+        <input type="email" id="email" placeholder="Email" value="flowtest_final@test.com">
+        <input type="password" id="password" placeholder="Password" value="TestPass123">
+        <input type="password" id="confirmPassword" placeholder="Confirm Password" value="TestPass123">
+        <input type="text" id="verificationCode" placeholder="Code" style="display: none;">
+        <button type="submit">Submit</button>
+    </form>
+    
+    <div id="output"></div>
+    
+    <script>
+        let isCodeStep = false;
+        const testForm = document.getElementById('testForm');
+        const output = document.getElementById('output');
+        
+        function log(message) {
+            const p = document.createElement('p');
+            p.textContent = message;
+            output.appendChild(p);
+            console.log(message);
+        }
+        
+        testForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const verificationCode = document.getElementById('verificationCode').value.trim();
+            
+            if (!isCodeStep) {
+                // Step 1
+                log('=== STEP 1: SEND CODE ===');
+                log(`Email: ${email}`);
+                
+                try {
+                    const response = await fetch('auth_signup.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: `action=send_code&email=${encodeURIComponent(email)}`
+                    });
+                    
+                    const result = await response.json();
+                    log(`Response: ${JSON.stringify(result)}`);
+                    
+                    if (result.success) {
+                        log('✓ Code sent successfully');
+                        isCodeStep = true;
+                        document.getElementById('verificationCode').style.display = 'block';
+                        
+                        // Get the code from database
+                        const getCodeResponse = await fetch(`get_code.php?email=${encodeURIComponent(email)}`);
+                        const codeData = await getCodeResponse.json();
+                        log(`Retrieved code from DB: ${codeData.code}`);
+                        document.getElementById('verificationCode').value = codeData.code;
+                        
+                        log('Code input field now visible. Ready for step 2.');
+                    }
+                } catch (error) {
+                    log(`Error: ${error.message}`);
+                }
+            } else {
+                // Step 2
+                log('=== STEP 2: VERIFY AND CREATE ===');
+                log(`Username: ${username}`);
+                log(`Email: ${email}`);
+                log(`Password length: ${password.length}`);
+                log(`Code: ${verificationCode}`);
+                
+                const bodyData = `action=verify_and_create&username=${encodeURIComponent(username)}&email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}&code=${encodeURIComponent(verificationCode)}`;
+                log(`POST body: ${bodyData}`);
+                
+                try {
+                    const response = await fetch('auth_signup.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: bodyData
+                    });
+                    
+                    log(`Response status: ${response.status}`);
+                    const result = await response.json();
+                    log(`Response: ${JSON.stringify(result)}`);
+                    
+                    if (result.success) {
+                        log('✓ Account created successfully!');
+                    } else {
+                        log(`✗ Error: ${result.message}`);
+                    }
+                } catch (error) {
+                    log(`Error: ${error.message}`);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
