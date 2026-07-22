@@ -294,12 +294,10 @@ function validatePassword(password) {
 
 // ===== LOGOUT FUNCTION =====
 function logout() {
-    if (confirm('Are you sure you want to logout?')) {
-        sessionStorage.removeItem('userLogged');
-        sessionStorage.removeItem('currentUsername');
-        sessionStorage.removeItem('currentEmail');
-        window.location.href = 'logout.php';
-    }
+    sessionStorage.removeItem('userLogged');
+    sessionStorage.removeItem('currentUsername');
+    sessionStorage.removeItem('currentEmail');
+    window.location.href = 'logout.php';
 }
 
 // User logout function (same as logout)
@@ -581,7 +579,8 @@ sessionStorage.setItem('myAdminTabId', adminTabId);
 
     // ===== LOAD CART =====
     const cartItems = document.querySelector('.cart-items');
-    if (cartItems) {
+    const usesCustomCartRenderer = document.querySelector('[data-custom-cart="true"]');
+    if (cartItems && !usesCustomCartRenderer) {
         displayCart();
         setupCartDelegation();
     }
@@ -835,19 +834,16 @@ function setupCartDelegation() {
 
             console.log(`Remove button clicked for course ${courseId}`);
 
-            if (confirm('Are you sure you want to remove this course from your cart?')) {
-                console.log(`Confirmed: Removing course ${courseId}`);
-                try {
-                    cart.remove(courseId);
-                    console.log(`Course ${courseId} removed from cart`);
-                    console.log('Current cart items:', cart.items);
+            try {
+                cart.remove(courseId);
+                console.log(`Course ${courseId} removed from cart`);
+                console.log('Current cart items:', cart.items);
 
-                    // Refresh the display
-                    displayCart();
-                    console.log('Cart display updated');
-                } catch (error) {
-                    console.error('Error removing course:', error);
-                }
+                // Refresh the display
+                displayCart();
+                console.log('Cart display updated');
+            } catch (error) {
+                console.error('Error removing course:', error);
             }
         }
     };

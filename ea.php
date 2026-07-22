@@ -105,7 +105,7 @@ if (isset($_SESSION['user_id'])) {
 
         <!-- 🔐 NOT LOGGED IN — Show buy button, redirect to login on click -->
         <div style="max-width:600px; margin:0 auto; padding:2rem; border-radius:20px; background: linear-gradient(145deg, rgba(26,31,58,0.8), rgba(10,14,39,0.9)); border:1px solid rgba(0,212,255,0.2);">
-            <h4 style="color: #00b894; margin-top: 0; margin-bottom: 1rem;">TTR Trading Manager</h4>
+            <h4 class="ea-manager-title">TTR Trading Manager</h4>
             <p style="text-align: left; margin-bottom: 1.5rem; color: var(--text-light); line-height: 1.6;">
                 Stop risking too much on a single trade. Our Risk Calculator is designed to help you manage position size with precision, control losses, and stay consistent. In just seconds, you can know exactly how much to risk based on your account, entry, and stop loss—so every trade is planned, calculated, and professional.
             </p>
@@ -120,7 +120,7 @@ if (isset($_SESSION['user_id'])) {
 
         <!-- ✅ ACCESS GRANTED -->
         <div style="max-width:600px; margin:0 auto; padding:2rem; border-radius:20px; background: linear-gradient(145deg, rgba(26,31,58,0.8), rgba(10,14,39,0.9)); border:1px solid rgba(0,212,255,0.2);">
-            <h4 style="color: #00b894; margin-top: 0; margin-bottom: 1rem;">TTR Trading Manager</h4>
+            <h4 class="ea-manager-title">TTR Trading Manager</h4>
             
             <h3 style="color:#00ff88; margin-bottom: 1.5rem;">✔ Access Granted</h3>
 
@@ -134,7 +134,7 @@ if (isset($_SESSION['user_id'])) {
 
         <!-- ⏳ PENDING -->
         <div style="max-width:600px; margin:0 auto; padding:2rem; border-radius:20px; background: linear-gradient(145deg, rgba(26,31,58,0.8), rgba(10,14,39,0.9)); border:1px solid #ffc107;">
-            <h4 style="color: #00b894; margin-top: 0; margin-bottom: 1rem;">TTR Trading Manager</h4>
+            <h4 class="ea-manager-title">TTR Trading Manager</h4>
 
             <h3 style="color:#ffc107; margin-bottom: 1rem;">⏳ Pending Approval</h3>
             <p style="color: var(--text-light);">Manager will approve your order soon.</p>
@@ -144,7 +144,7 @@ if (isset($_SESSION['user_id'])) {
 
         <!-- 🛒 NOT PURCHASED -->
         <div style="max-width:600px; margin:0 auto; padding:2rem; border-radius:20px; background: linear-gradient(145deg, rgba(26,31,58,0.8), rgba(10,14,39,0.9)); border:1px solid rgba(0,212,255,0.2);">
-            <h4 style="color: #00b894; margin-top: 0; margin-bottom: 1rem;">TTR Trading Manager</h4>
+            <h4 class="ea-manager-title">TTR Trading Manager</h4>
             <p style="text-align: left; margin-bottom: 1.5rem; color: var(--text-light); line-height: 1.6;">
                 Stop risking too much on a single trade. Our Risk Calculator is designed to help you manage position size with precision, control losses, and stay consistent. In just seconds, you can know exactly how much to risk based on your account, entry, and stop loss—so every trade is planned, calculated, and professional.
             </p>
@@ -279,6 +279,16 @@ if (isset($_SESSION['user_id'])) {
 </section>
 
 <style>
+    .ea-manager-title {
+        margin-top: 0;
+        margin-bottom: 1rem;
+        color: #eefaff !important;
+        background: var(--brand-title-gradient, linear-gradient(135deg, #ffffff 30%, #00d4ff)) !important;
+        background-clip: text !important;
+        -webkit-background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+    }
+
     .download-btn {
         display: inline-block;
         padding: 1.2rem 2.5rem;

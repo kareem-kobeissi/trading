@@ -293,6 +293,201 @@ include 'header.php';
     }
 </style>
 
+<style>
+    /* Refined user dashboard presentation */
+    .dashboard-layout {
+        width: min(1400px, 100%);
+        margin: 0 auto 3rem;
+        grid-template-columns: 245px minmax(0, 1fr);
+        gap: 1.25rem;
+        align-items: start;
+    }
+
+    .dashboard-sidebar {
+        top: 100px;
+        padding: 1.2rem;
+        border-radius: 18px;
+        background: linear-gradient(155deg, rgba(18,28,54,.95), rgba(7,12,30,.97));
+        border: 1px solid rgba(0,212,255,.18);
+        box-shadow: 0 18px 45px rgba(0,0,0,.25);
+        overflow: hidden;
+    }
+
+    .dashboard-sidebar::before {
+        content: '';
+        display: block;
+        width: 46px;
+        height: 4px;
+        margin-bottom: 1rem;
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--primary-color), #00b894);
+        box-shadow: 0 0 18px rgba(0,212,255,.35);
+    }
+
+    .dashboard-sidebar h3 {
+        margin: 0 0 1rem;
+        padding: 0 0 .8rem;
+        font-size: .85rem;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+        border-bottom: 1px solid rgba(0,212,255,.14);
+    }
+
+    .sidebar-menu { display: grid; gap: .45rem; }
+    .sidebar-menu li { margin: 0; }
+    .sidebar-menu a {
+        min-height: 47px;
+        padding: .75rem .85rem;
+        border: 1px solid transparent;
+        border-radius: 11px;
+        font-size: .9rem;
+        font-weight: 650;
+    }
+    .sidebar-menu a:hover { transform: translateX(4px); background: rgba(0,212,255,.07); }
+    .sidebar-menu a.active {
+        border: 1px solid rgba(0,212,255,.3);
+        border-left: 1px solid rgba(0,212,255,.3);
+        background: linear-gradient(135deg, rgba(0,212,255,.17), rgba(0,184,148,.08));
+        box-shadow: inset 3px 0 0 var(--primary-color), 0 8px 22px rgba(0,212,255,.08);
+    }
+
+    .logout-btn {
+        min-height: 44px;
+        margin-top: 1.2rem;
+        padding: .7rem 1rem;
+        border-radius: 11px;
+        background: rgba(239,68,68,.1);
+        color: #ff8585;
+        border: 1px solid rgba(239,68,68,.35);
+        box-shadow: none;
+    }
+    .logout-btn:hover { background: linear-gradient(135deg, #dc2626, #991b1b); color: #fff; transform: translateY(-2px); }
+
+    .dashboard-content {
+        min-width: 0;
+        padding: clamp(1.25rem, 2.5vw, 2.3rem);
+        border-radius: 20px;
+        background: linear-gradient(150deg, rgba(18,28,54,.75), rgba(7,12,30,.84));
+        border: 1px solid rgba(0,212,255,.12);
+        box-shadow: 0 20px 55px rgba(0,0,0,.24);
+    }
+
+    .dashboard-title {
+        width: fit-content;
+        margin: 0 0 1.5rem;
+        padding: 0;
+        border: 0;
+        font-size: clamp(1.55rem, 3vw, 2.05rem);
+        letter-spacing: -.02em;
+    }
+    .dashboard-title::after {
+        content: '';
+        display: block;
+        width: 55%;
+        height: 3px;
+        margin-top: .55rem;
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--primary-color), transparent);
+    }
+
+    .orders-table-container {
+        width: 100%;
+        overflow-x: auto;
+        padding: .65rem;
+        border-radius: 15px;
+        background: rgba(5,10,25,.42);
+        border: 1px solid rgba(0,212,255,.14);
+        scrollbar-color: var(--primary-color) rgba(255,255,255,.04);
+        scrollbar-width: thin;
+    }
+    .orders-table {
+        min-width: 760px;
+        margin: 0;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    .orders-table th {
+        padding: .85rem .8rem;
+        background: #111a34;
+        font-size: .72rem;
+        letter-spacing: .08em;
+    }
+    .orders-table th:first-child { border-radius: 10px 0 0 10px; }
+    .orders-table th:last-child { border-radius: 0 10px 10px 0; }
+    .orders-table td { padding: .9rem .8rem; font-size: .84rem; line-height: 1.45; }
+    .orders-table tbody tr:nth-child(even) { background: rgba(255,255,255,.018); }
+    .orders-table tr:hover { transform: none; background: rgba(0,212,255,.06); }
+    .status-badge { padding: .4rem .7rem; border-radius: 999px; font-size: .72rem; }
+
+    .empty-state {
+        min-height: 190px;
+        display: grid;
+        place-items: center;
+        padding: 2rem;
+        border-radius: 15px;
+        background: linear-gradient(135deg, rgba(0,212,255,.045), rgba(0,184,148,.025));
+        border: 1px dashed rgba(0,212,255,.24);
+        line-height: 1.6;
+    }
+
+    .course-access-card {
+        border-radius: 16px;
+        background: linear-gradient(145deg, rgba(255,255,255,.05), rgba(0,212,255,.035));
+        box-shadow: 0 12px 30px rgba(0,0,0,.16);
+    }
+
+    #profileContainer > div,
+    #passwordSection > div > div {
+        border-radius: 16px !important;
+        background: linear-gradient(145deg, rgba(255,255,255,.05), rgba(0,212,255,.025)) !important;
+        border-color: rgba(0,212,255,.18) !important;
+        box-shadow: 0 12px 35px rgba(0,0,0,.15);
+    }
+
+    #passwordSection input {
+        min-height: 50px;
+        background: rgba(5,12,30,.55) !important;
+        border: 1px solid rgba(0,212,255,.2) !important;
+        border-radius: 11px !important;
+        transition: border-color .2s ease, box-shadow .2s ease;
+    }
+    #passwordSection input:focus {
+        outline: none;
+        border-color: var(--primary-color) !important;
+        box-shadow: 0 0 0 3px rgba(0,212,255,.1);
+    }
+    #changePasswordBtn {
+        background: linear-gradient(135deg, var(--primary-color), #00b894) !important;
+        border-radius: 11px !important;
+        box-shadow: 0 10px 28px rgba(0,212,255,.2);
+    }
+    #changePasswordBtn:hover { transform: translateY(-2px); box-shadow: 0 14px 34px rgba(0,212,255,.3); }
+
+    @media (max-width: 900px) {
+        .dashboard-layout { grid-template-columns: 1fr; gap: 1rem; }
+        .dashboard-sidebar { position: static; padding: .9rem; }
+        .dashboard-sidebar::before { display: none; }
+        .dashboard-sidebar h3 { text-align: center; margin-bottom: .7rem; }
+        .sidebar-menu { display: flex; gap: .55rem; overflow-x: auto; padding-bottom: .25rem; }
+        .sidebar-menu li { flex: 0 0 auto; }
+        .sidebar-menu a { white-space: nowrap; min-height: 42px; padding: .65rem .8rem; }
+        .sidebar-menu a.active { box-shadow: inset 0 -3px 0 var(--primary-color); }
+        .logout-btn { margin-top: .75rem; }
+    }
+
+    @media (max-width: 600px) {
+        .section:has(.dashboard-layout) { padding: 1rem .65rem; }
+        .dashboard-content { padding: 1rem .7rem; border-radius: 15px; }
+        .dashboard-title { font-size: 1.4rem; margin-bottom: 1.1rem; }
+        .orders-table-container { padding: .35rem; border-radius: 12px; }
+        .orders-table td { padding: .72rem .62rem; }
+        #passwordSection > div { max-width: none !important; }
+        #passwordSection > div > div { padding: 1.15rem !important; }
+        #profileContainer > div { padding: 1.25rem !important; max-width: none !important; }
+        .empty-state { min-height: 150px; padding: 1.25rem; }
+    }
+</style>
+
 <!-- ===== USER DASHBOARD ===== -->
 <section class="section">
     <div class="dashboard-layout">

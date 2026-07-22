@@ -67,6 +67,66 @@ include 'header.php';
     }
     .whish-logo { background: #e31b23; color: #fff; font-size: 0.65rem; letter-spacing: -0.5px; }
     .usdt-logo { background: #26a17b; color: #fff; font-size: 1.35rem; }
+
+    .payment-receipt-modal {
+        background: rgba(2, 6, 18, 0.88) !important;
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+    }
+    .payment-receipt-card {
+        background: linear-gradient(155deg, rgba(19, 31, 59, .98), rgba(6, 12, 29, .99)) !important;
+        border: 1px solid rgba(0, 212, 255, .28);
+        border-radius: 22px !important;
+        box-shadow: 0 30px 90px rgba(0, 0, 0, .65), 0 0 45px rgba(0, 212, 255, .12) !important;
+    }
+    .payment-receipt-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 12%;
+        right: 12%;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, #00d4ff, #00b894, transparent);
+    }
+    .receipt-status-icon {
+        display: grid;
+        place-items: center;
+        width: 58px;
+        height: 58px;
+        margin: 0 auto .85rem;
+        border-radius: 50%;
+        color: #06111b;
+        font-size: 1.7rem;
+        font-weight: 900;
+        background: linear-gradient(135deg, #35ddff, #22d3a7);
+        box-shadow: 0 10px 30px rgba(0, 212, 255, .25);
+    }
+    .receipt-header {
+        margin-bottom: 1.4rem !important;
+        padding-bottom: 1.25rem !important;
+    }
+    .receipt-header h2 { font-size: clamp(1.65rem, 5vw, 2rem) !important; }
+    .receipt-close-btn { transition: background .25s ease, transform .25s ease, border-color .25s ease; }
+    .receipt-close-btn:hover {
+        background: rgba(239, 68, 68, .18) !important;
+        border-color: rgba(239, 68, 68, .55) !important;
+        transform: rotate(90deg);
+    }
+    #whatsappSendBtn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 28px rgba(37, 211, 102, .32) !important;
+    }
+    #receiptProductName {
+        max-width: 66%;
+        text-align: right;
+        line-height: 1.5;
+    }
+    @media (max-width: 600px) {
+        .payment-receipt-modal { padding: .65rem !important; align-items: flex-start !important; }
+        .payment-receipt-card { padding: 1.35rem 1rem !important; max-height: calc(100vh - 1.3rem) !important; border-radius: 17px !important; }
+        .receipt-close-btn { top: .55rem !important; right: .55rem !important; width: 36px !important; height: 36px !important; }
+        .receipt-status-icon { width: 50px; height: 50px; font-size: 1.45rem; }
+    }
 </style>
 
 <div class="checkout-container">
@@ -106,11 +166,11 @@ include 'header.php';
                         <div class="payment-methods">
                             <label class="payment-method-option">
                                 <input type="radio" name="paymentMethod" value="whatsapp" class="payment-radio" checked>
-                                <span class="payment-label"><span class="payment-logo whish-logo">whish</span> Whish <small>(Recommended)</small></span>
+                                <span class="payment-label"><span class="payment-logo whish-logo">whish</span> Whish <small></small></span>
                             </label>
                             <label class="payment-method-option">
                                 <input type="radio" name="paymentMethod" value="usdt" class="payment-radio">
-                                <span class="payment-label"><span class="payment-logo usdt-logo">₮</span> USDT <small>(Alternative)</small></span>
+                                <span class="payment-label"><span class="payment-logo usdt-logo">₮</span> USDT <small></small></span>
                             </label>
                         </div>
 
@@ -244,13 +304,16 @@ include 'header.php';
 </div>
 
 <!-- Payment Receipt Modal -->
-<div id="paymentReceiptModal"
+<div id="paymentReceiptModal" class="payment-receipt-modal"
     style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000000; z-index: 10000; justify-content: center; align-items: center; padding: 2rem;">
-    <div
+    <div class="payment-receipt-card"
         style="background: var(--bg-main); border-radius: 15px; padding: 2.5rem; width: 100%; max-width: 550px; max-height: 95vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0, 212, 255, 0.4); position: relative; margin: auto;">
+        <button type="button" class="receipt-close-btn" onclick="closePaymentReceipt()" aria-label="Close order receipt"
+            style="position: absolute; top: 0.8rem; right: 0.9rem; width: 40px; height: 40px; border: 1px solid rgba(255,255,255,0.18); border-radius: 50%; background: rgba(255,255,255,0.07); color: #fff; font-size: 1.65rem; line-height: 1; cursor: pointer; z-index: 2;">&times;</button>
         <!-- Receipt Header -->
-        <div
+        <div class="receipt-header"
             style="text-align: center; margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 2px solid rgba(0, 212, 255, 0.2);">
+            <div class="receipt-status-icon">✓</div>
             <h2 style="margin: 0; color: var(--primary-color); font-size: 1.8rem;">Order Received</h2>
             <p style="margin: 0.5rem 0 0 0; color: var(--text-muted); font-size: 0.9rem;">Awaiting payment confirmation</p>
         </div>
@@ -319,6 +382,7 @@ include 'header.php';
                 <p style="margin: 0 0 0.75rem; color: var(--text-muted);">1. Send the exact amount shown above.</p>
                 <div id="whishPaymentDetails" style="margin-bottom: 0.75rem;">
                     <p style="margin: 0 0 0.4rem; color: var(--text-muted);">2. Send via Whish to:</p>
+                    <img src="qr.jpeg" alt="Whish payment QR code" loading="lazy" style="display: block; width: 100%; max-width: 240px; margin: 0 auto 1rem; border-radius: 12px; background: #fff; padding: 0.35rem;">
                     <button type="button" onclick="copyPaymentValue('+96171493997', this)" style="width: 100%; padding: 0.8rem; border: 1px solid var(--primary-color); border-radius: 8px; background: transparent; color: var(--primary-color); cursor: pointer; font-weight: bold;">+961 71 493 997 — Copy number</button>
                 </div>
                 <div id="usdtPaymentDetails" style="display: none; margin-bottom: 0.75rem;">
@@ -370,6 +434,9 @@ include 'header.php';
 <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@29.1.0/dist/js/intlTelInput.min.js"></script>
 <script>
     let checkoutPhoneInput = null;
+    let redirectAfterWhatsApp = false;
+    let whatsappOpenedAt = 0;
+    let pendingCheckoutOrder = null;
 
     const checkoutCart = {
         items: [],
@@ -541,50 +608,12 @@ include 'header.php';
                         if (item.type === 'robot_ib') return 'Instant Breakout EA';
                         return item.title || 'Unknown Product';
                     });
-                    productName = names.join(' + ');
+                    productName = names.join(' & ');
                 }
 
-                // ===== SAVE TO DATABASE =====
-                try {
-                    const response = await fetch('save_order.php', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            order_ref: order_ref,
-                            name: name,
-                            phone: phone,
-                            email: currentEmail,
-                            payment_method: paymentMethod,
-                            total: total,
-                            items: checkoutCart.items
-                        })
-                    });
-                    const result = await response.json();
-                    if (!result.success) {
-                        console.error('DB save failed:', result.message);
-                        alert('We could not place your order. Your cart is safe—please try again.');
-                        if (submitBtn) {
-                            submitBtn.disabled = false;
-                            submitBtn.textContent = isFreeOnly ? 'Complete Enrollment' : 'Place Order';
-                        }
-                        return;
-                    } else {
-                        console.log('✓ Order saved to database:', result.order_ref);
-                    }
-                } catch (err) {
-                    console.error('DB save error:', err);
-                    alert('We could not place your order. Your cart is safe—please try again.');
-                    if (submitBtn) {
-                        submitBtn.disabled = false;
-                        submitBtn.textContent = isFreeOnly ? 'Complete Enrollment' : 'Place Order';
-                    }
-                    return;
-                }
-
-                // ===== SAVE TO localStorage (backup) =====
                 const order = {
                     id: order_ref,
-                    items: checkoutCart.items,
+                    items: JSON.parse(JSON.stringify(checkoutCart.items)),
                     total: total,
                     name: name,
                     phone: phone,
@@ -597,23 +626,19 @@ include 'header.php';
                     createdTime: new Date().getTime()
                 };
 
-                const userOrders = JSON.parse(localStorage.getItem('user_orders_' + currentUsername) || '[]');
-                userOrders.push(order);
-                localStorage.setItem('user_orders_' + currentUsername, JSON.stringify(userOrders));
-
-                const allOrders = JSON.parse(localStorage.getItem('admin_orders') || '[]');
-                allOrders.push(order);
-                localStorage.setItem('admin_orders', JSON.stringify(allOrders));
-
-                console.log('✓ Order saved');
-
-                // Clear cart
-                localStorage.removeItem('cart');
-                checkoutCart.items = [];
-
-                if (submitBtn) {
-                    submitBtn.disabled = false;
-                }
+                pendingCheckoutOrder = {
+                    dbPayload: {
+                        order_ref: order_ref,
+                        name: name,
+                        phone: phone,
+                        email: currentEmail,
+                        payment_method: paymentMethod,
+                        total: total,
+                        items: order.items
+                    },
+                    localOrder: order,
+                    submitted: false
+                };
 
                 // Show result based on type
                 // Show receipt modal for all orders (Free and EA)
@@ -636,7 +661,11 @@ include 'header.php';
                 const whishDetails = document.getElementById('whishPaymentDetails');
                 const usdtDetails = document.getElementById('usdtPaymentDetails');
                 if (manualSteps) manualSteps.style.display = isFreeOnly ? 'none' : 'block';
-                if (whatsappButton) whatsappButton.style.display = isFreeOnly ? 'none' : 'block';
+                if (whatsappButton) {
+                    whatsappButton.style.display = isFreeOnly ? 'none' : 'block';
+                    whatsappButton.disabled = false;
+                    whatsappButton.textContent = 'Send Payment Proof on WhatsApp';
+                }
                 if (!isFreeOnly && whishDetails && usdtDetails) {
                     whishDetails.style.display = paymentMethod === 'whatsapp' ? 'block' : 'none';
                     usdtDetails.style.display = paymentMethod === 'usdt' ? 'block' : 'none';
@@ -716,8 +745,89 @@ include 'header.php';
             const receiptAmount = document.getElementById('receiptAmount')?.textContent || '';
             const receiptMethod = document.getElementById('receiptPaymentMethod')?.textContent || '';
             const message = `Hello, I have completed my payment.\n\nOrder: ${receiptOrderId}\nProduct: ${receiptProduct}\nAmount: ${receiptAmount}\nMethod: ${receiptMethod}\nName: ${receiptName}\nEmail: ${receiptEmail}\nPhone: ${receiptPhone}\n\nI will attach my payment screenshot here.`;
-            window.open(`https://wa.me/96171493997?text=${encodeURIComponent(message)}`, '_blank');
+            const whatsappWindow = window.open('about:blank', '_blank');
+            submitPendingOrderAndOpenWhatsApp(message, whatsappWindow);
         };
+
+        async function submitPendingOrderAndOpenWhatsApp(message, whatsappWindow) {
+            if (!pendingCheckoutOrder || pendingCheckoutOrder.submitted) return;
+
+            const whatsappButton = document.getElementById('whatsappSendBtn');
+            if (whatsappButton) {
+                whatsappButton.disabled = true;
+                whatsappButton.textContent = 'Submitting Order...';
+            }
+
+            try {
+                const response = await fetch('save_order.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(pendingCheckoutOrder.dbPayload)
+                });
+                const result = await response.json();
+                if (!result.success) throw new Error(result.message || 'Order could not be submitted');
+
+                const order = pendingCheckoutOrder.localOrder;
+                const userOrders = JSON.parse(localStorage.getItem('user_orders_' + currentUsername) || '[]');
+                userOrders.push(order);
+                localStorage.setItem('user_orders_' + currentUsername, JSON.stringify(userOrders));
+
+                const allOrders = JSON.parse(localStorage.getItem('admin_orders') || '[]');
+                allOrders.push(order);
+                localStorage.setItem('admin_orders', JSON.stringify(allOrders));
+
+                pendingCheckoutOrder.submitted = true;
+                localStorage.removeItem('cart');
+                checkoutCart.items = [];
+
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = 'Order Submitted';
+                }
+
+                redirectAfterWhatsApp = true;
+                whatsappOpenedAt = Date.now();
+                const whatsappUrl = `https://wa.me/96171493997?text=${encodeURIComponent(message)}`;
+                if (whatsappWindow) {
+                    whatsappWindow.location.href = whatsappUrl;
+                } else {
+                    window.location.href = whatsappUrl;
+                }
+            } catch (error) {
+                console.error('Order submission failed:', error);
+                if (whatsappWindow) whatsappWindow.close();
+                if (whatsappButton) {
+                    whatsappButton.disabled = false;
+                    whatsappButton.textContent = 'Try Sending Payment Proof Again';
+                }
+            }
+        }
+
+        window.closePaymentReceipt = function () {
+            const modal = document.getElementById('paymentReceiptModal');
+            if (modal) modal.style.display = 'none';
+            document.body.style.overflow = '';
+            const footer = document.querySelector('footer');
+            if (footer) footer.style.display = '';
+            if (pendingCheckoutOrder && !pendingCheckoutOrder.submitted) {
+                pendingCheckoutOrder = null;
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = isFreeOnly ? 'Complete Enrollment' : 'Place Order';
+                }
+            }
+        };
+
+        function continueAfterWhatsApp() {
+            if (!redirectAfterWhatsApp || Date.now() - whatsappOpenedAt < 800) return;
+            redirectAfterWhatsApp = false;
+            window.location.href = 'courses.php';
+        }
+
+        window.addEventListener('focus', continueAfterWhatsApp);
+        document.addEventListener('visibilitychange', function () {
+            if (!document.hidden) continueAfterWhatsApp();
+        });
 
         window.copyPaymentValue = function (value, button) {
             navigator.clipboard.writeText(value).then(function () {

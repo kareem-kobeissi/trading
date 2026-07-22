@@ -2,6 +2,13 @@
 // update_order.php
 header('Content-Type: application/json');
 include 'config.php';
+require_once 'admin_log_schema.php';
+
+$schemaError = ensureAdminLogSchema($conn);
+if ($schemaError) {
+    echo json_encode(['success' => false, 'message' => $schemaError]);
+    exit();
+}
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['success' => false, 'message' => 'Invalid request']);
@@ -28,11 +35,13 @@ $where = $db_id ? "id = $db_id" : "order_ref = '$order_ref'";
 
 // ===== PER-ITEM ACTIONS =====
 if (in_array($action, ['approve_item', 'cancel_item', 'restore_item', 'revert_item']) && $item_id) {
-    $newStatus = match ($action) {
+    $statusMap = [
         'approve_item' => 'unlocked',
-        'cancel_item'  => 'cancelled',
-        'restore_item', 'revert_item' => 'pending',
-    };
+        'cancel_item' => 'cancelled',
+        'restore_item' => 'pending',
+        'revert_item' => 'pending'
+    ];
+    $newStatus = $statusMap[$action];
     $sql = "UPDATE order_items SET item_status = '$newStatus' WHERE id = $item_id";
     if ($conn->query($sql)) {
         // Log the action

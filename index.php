@@ -46,14 +46,14 @@ include 'header.php';
             <!-- Decorative Glow -->
             <div style="position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle at center, rgba(0, 212, 255, 0.05) 0%, transparent 70%); pointer-events: none;"></div>
             
-            <h2 style="font-size: 2.5rem; font-weight: 900; margin-bottom: 2rem; color: #fff; text-transform: uppercase; letter-spacing: 3px; background: linear-gradient(135deg, #00d4ff, #00b894); -webkit-background-clip: text; -webkit-text-fill-color: transparent; position: relative; z-index: 1;">Expert Advisors</h2>
-            <p style="font-size: 1.2rem; color: rgba(225, 225, 227, 0.95); max-width: 850px; margin: 0 auto 3rem; line-height: 1.9; position: relative; z-index: 1;">
+            <h2 style="font-size: clamp(1.6rem, 3vw, 2rem); font-weight: 900; margin-bottom: 1.5rem; color: #fff; text-transform: uppercase; letter-spacing: 2px; background: linear-gradient(135deg, #00d4ff, #00b894); -webkit-background-clip: text; -webkit-text-fill-color: transparent; position: relative; z-index: 1;">Expert Advisors</h2>
+            <p style="font-size: 1rem; color: rgba(225, 225, 227, 0.95); max-width: 850px; margin: 0 auto 2rem; line-height: 1.7; position: relative; z-index: 1;">
                 Unlock the power of automated trading with Expert Advisors designed for traders who value precision, discipline, and performance. 
                 Our EAs help remove emotional decision-making and bring more structure to your execution, allowing you to trade with greater consistency and confidence. 
                 Explore advanced tools built to support your strategy, improve efficiency, and give you a smarter way to approach the markets.
             </p>
             <div style="position: relative; z-index: 1;">
-                <a href="ea.php" class="btn btn-primary" style="padding: 1rem 2.5rem; font-size: 1rem; font-weight: 800; border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 212, 255, 0.4); background: linear-gradient(135deg, #00d4ff, #00b894); color: #000; border: none; text-decoration: none; display: inline-block; transition: all 0.4s ease;">
+                <a href="ea.php" class="btn btn-primary">
                     Discover Our EAs
                 </a>
             </div>

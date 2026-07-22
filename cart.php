@@ -19,7 +19,7 @@ include 'header.php';
 
 
 <!-- ===== MAIN CART CONTAINER ===== -->
-<div class="main-cart-wrapper">
+<div class="main-cart-wrapper" data-custom-cart="true">
     <div class="cart-layout">
         <!-- Cart Items Section -->
         <div class="cart-items-section">
@@ -52,11 +52,6 @@ include 'header.php';
 </div>
 
 <style>
-    /* Hide hamburger menu on cart page */
-    .hamburger {
-        display: none !important;
-    }
-
     /* Cart Page Styles */
     .cart-header-icon {
         font-size: 4rem;
@@ -572,7 +567,7 @@ include 'header.php';
 
 <script>
     // Cart Management System
-    const cart = {
+    const cartPage = {
         items: [],
 
         load: function() {
@@ -625,13 +620,13 @@ include 'header.php';
     // Display cart on cart.php page
     async function displayCartItems() {
         console.log('=== DISPLAY CART ITEMS ===');
-        cart.load();
+        cartPage.load();
 
         const cartItemsDiv = document.querySelector('.cart-items');
         const cartSummaryDiv = document.querySelector('.cart-summary');
 
         // EMPTY CART
-        if (cart.items.length === 0) {
+        if (cartPage.items.length === 0) {
             cartItemsDiv.innerHTML = `
             <div class="empty-cart-message">
                 <h3>Your Cart is Empty</h3>
@@ -660,7 +655,7 @@ include 'header.php';
             <tbody>
     `;
 
-        cart.items.forEach(item => {
+        cartPage.items.forEach(item => {
             const subtotal = item.price * item.quantity;
 
             tableHtml += `
@@ -681,15 +676,15 @@ include 'header.php';
         cartItemsDiv.innerHTML = tableHtml;
 
         // ===== CALCULATIONS =====
-        const subtotal = cart.getTotal();
+        const subtotal = cartPage.getTotal();
         const tax = subtotal * 0.01;
         const total = subtotal + tax;
 
         // ===== CHECK CONTENT =====
-        let hasCourse = cart.items.some(item => item.type === 'course');
-        let hasEA = cart.items.some(item => item.type === 'ea' || item.title === 'Risk Calculator'); 
-        let hasRobotSR = cart.items.some(item => item.id === 'robot_sr' || item.title === 'S&R Precision EA');
-        let hasRobotIB = cart.items.some(item => item.id === 'robot_ib' || item.title === 'Instant Breakout EA');
+        let hasCourse = cartPage.items.some(item => item.type === 'course');
+        let hasEA = cartPage.items.some(item => item.type === 'ea' || item.title === 'Risk Calculator'); 
+        let hasRobotSR = cartPage.items.some(item => item.id === 'robot_sr' || item.title === 'S&R Precision EA');
+        let hasRobotIB = cartPage.items.some(item => item.id === 'robot_ib' || item.title === 'Instant Breakout EA');
 
         let extraContent = '';
 
@@ -805,16 +800,14 @@ include 'header.php';
     }
     // Remove item from cart
     function removeFromCart(itemId) {
-        if (confirm('Are you sure you want to remove this item from cart?')) {
-            cart.remove(itemId);
-            displayCartItems();
-        }
+        cartPage.remove(itemId);
+        displayCartItems();
     }
 
     // Proceed to checkout
     function proceedToCheckout() {
 
-        if (cart.items.length === 0) {
+        if (cartPage.items.length === 0) {
             alert('Your cart is empty!');
             return;
         }
@@ -828,7 +821,7 @@ include 'header.php';
         }
 
         // ✅ SAVE CART TEMPORARILY
-        localStorage.setItem('checkout_cart', JSON.stringify(cart.items));
+        localStorage.setItem('checkout_cart', JSON.stringify(cartPage.items));
 
         // ✅ GO TO CHECKOUT PAGE
         window.location.href = 'checkout.php';

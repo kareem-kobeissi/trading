@@ -22,44 +22,61 @@ $videoSections = [
     'basics' => [
         'title' => 'Basics',
         'videos' => [
+            'Introduction.mp4',
             'Chart Types.mp4',
-            'Market Structure Reading.mp4',
-            'Uptrend, Downtrend & Ranging Markets.mp4',
-            'Support & Resistance.mp4',
-            'Trendlines and Breakouts.mp4',
-            'Relative Strength Index (RSI).mp4',
-            'Moving Averages.mp4',
-            'Engulfing Candlestick Patterns.mp4'
+ 'Engulfing Patterns.mp4',
+            'Market Structure.mp4',
+
+
+
+            'RSI & SMA.mp4',
+
+            
         ]
     ],
     'advanced' => [
         'title' => 'Advanced',
         'videos' => [
-            'Break of Structure (BOS) & Change of Character (CHOCH).mp4',
-            'Breakout , Support ,  Breakout (BSB) & Breakout ,  Resistance , Breakout (BRB).mp4',
-            'Candlestick Breakouts.mp4',
-            'Candlestick Patterns.mp4',
-            'Rejection Candles at Demand Zones.mp4',
-            'Fair Value Gaps (FVG).mp4',
-            'False Breakouts (Fakeouts).mp4',
-            'Fibonacci Retracement.mp4',
-
-            'Fibonacci Extension.mp4',
-            'Key Market Levels.mp4',
-            'Liquidity Sweeps.mp4',
+            'S&R and Trendline.mp4',
+             'S&R Breaks.mp4',
+             'RBS & SBR and Supply & Demand .mp4',
+             'Fake - Breakout.mp4',
+              '(BOS) & (CHOCH).mp4',
+             'Patterns.mp4',
+           
+            
+            
+            'Fibonacci Retracement & Extension.mp4',
             'Order Blocks.mp4',
-            'Pattern Confirmation.mp4',
-            'Resistance Becomes Support (RBS) & Support Becomes Resistance (SBR).mp4',
-            'Supply and Demand Zones.mp4'
+            'Fair Value Gap.mp4',
+            'Liquidity Sweeps.mp4',
+            
+            
+            
+          
+            'The Holy Grail.mp4',
+            
+          
+            
+            
+            
+
+    
+            
         ]
     ],
     'risk' => [
         'title' => 'Risk Management',
         'videos' => [
-            'Risk-to-Reward Ratio (RRR).mp4'
+            'Risk Management.mp4'
         ]
     ]
 ];
+
+$foundationLessonCount = count($videoSections['basics']['videos']);
+$advancedLessonCount = count($videoSections['advanced']['videos']);
+$riskLessonCount = count($videoSections['risk']['videos']);
+$totalLessonCount = $foundationLessonCount + $advancedLessonCount + $riskLessonCount;
 ?>
 
 <!-- ===== COURSES HEADER SECTION ===== -->
@@ -82,44 +99,46 @@ $videoSections = [
             </div>
 
             <div class="course-details">
-                <p><strong>24 structured lessons</strong> covering market foundations, advanced execution, and professional risk control</p>
+                <p><strong><?php echo $totalLessonCount; ?> structured lessons</strong> covering market foundations, advanced execution, and professional risk control</p>
                 <ul class="course-modules">
-                    <li>Foundation Module — 8 Lessons</li>
-                    <li>Advanced Strategy Module — 15 Lessons</li>
-                    <li>Risk Management Module — 1 Masterclass</li>
+                    <li>Foundation Module — <?php echo $foundationLessonCount; ?> Lessons</li>
+                    <li>Advanced Strategy Module — <?php echo $advancedLessonCount; ?> Lessons</li>
+                    <li>Risk Management Module — <?php echo $riskLessonCount; ?> Masterclass</li>
                 </ul>
             </div>
 
-            <?php if (!$user_id): ?>
-                <a href="login.php?redirect=courses.php" class="btn-buy-course">Login to Purchase</a>
-            <?php elseif ($has_access): ?>
-                <div class="access-granted">
-                    ✓ Course Unlocked - You have full access
-                </div>
-            <?php else: ?>
-                <button type="button" class="btn-buy-course" onclick="addCourseToCart()">Enroll Now</button>
-            <?php endif; ?>
+            <div id="courseActionArea">
+                <?php if (!$user_id): ?>
+                    <a href="login.php?redirect=courses.php" class="btn-buy-course">Login to Purchase</a>
+                <?php elseif ($has_access): ?>
+                    <div class="access-granted">✓ Course Unlocked - You have full access</div>
+                <?php else: ?>
+                    <button type="button" class="btn-buy-course" onclick="addCourseToCart()">Enroll Now</button>
+                <?php endif; ?>
+            </div>
         </div>
 
         <!-- Section Selector -->
         <div class="section-selector">
             <label class="radio-label">
                 <input type="radio" name="course-section" value="basics" checked>
-                <span class="radio-button">Basics</span>
+                <span class="radio-button"><span class="module-icon">01</span><span><strong>Basics</strong><small>Build your foundation</small></span></span>
             </label>
             <label class="radio-label">
                 <input type="radio" name="course-section" value="advanced">
-                <span class="radio-button"> Advanced</span>
+                <span class="radio-button"><span class="module-icon">02</span><span><strong>Advanced</strong><small>Master execution</small></span></span>
             </label>
             <label class="radio-label">
                 <input type="radio" name="course-section" value="risk">
-                <span class="radio-button"> Risk Management</span>
+                <span class="radio-button"><span class="module-icon">03</span><span><strong>Risk Management</strong><small>Protect your capital</small></span></span>
             </label>
 
             <!-- Download PDF Button -->
             <div class="pdf-download-wrapper">
                 <button class="pdf-download-btn" id="pdfDownloadBtn" onclick="togglePdfMenu()">
-                    <i class="fas fa-file-pdf"></i> Download Course PDF
+                    <span class="workbook-icon"><i class="fas fa-file-pdf"></i></span>
+                    <span><strong>Course Workbook</strong><small>PDF learning resources</small></span>
+                    <i class="fas fa-chevron-down workbook-chevron"></i>
                 </button>
                 <div id="pdfLockOverlay" class="pdf-lock-overlay">
                     <div class="pdf-lock-content">
@@ -141,17 +160,16 @@ $videoSections = [
             <!-- Video Player Section -->
             <div class="video-player-section">
                 <div id="videoPlayer" class="video-player">
-                    <video id="mainVideo" controls controlsList="nodownload" preload="metadata" crossorigin="anonymous">
-                        <source src="videos/basics/chart types.mp4?t=<?php echo time(); ?>" type="video/mp4">
+                    <video id="mainVideo" controls controlsList="nodownload" preload="none">
                         <p>Your browser does not support HTML5 video. Please use Chrome, Firefox, Safari, or Edge.</p>
                     </video>
                     <?php if (!$has_access): ?>
-                    <div class="video-locked-overlay">
-                        <div class="lock-content">
-                            <div class="lock-icon"><i class="fas fa-lock"></i></div>
-                            <div class="unlock-title">Enroll to Unlock</div>
+                        <div class="video-locked-overlay">
+                            <div class="lock-content">
+                                <div class="lock-icon"><i class="fas fa-lock"></i></div>
+                                <div class="unlock-title">Enroll to Unlock</div>
+                            </div>
                         </div>
-                    </div>
                     <?php endif; ?>
                 </div>
                 <div id="videoTitle" class="video-title">chart types</div>
@@ -160,7 +178,13 @@ $videoSections = [
 
             <!-- Video Playlist -->
             <div class="video-playlist-wrapper">
-                <h3 id="sectionTitle" class="playlist-title">Basics Videos</h3>
+                <div class="playlist-heading">
+                    <div>
+                        <span class="playlist-eyebrow">COURSE CONTENT</span>
+                        <h3 id="sectionTitle" class="playlist-title">Basics Videos</h3>
+                    </div>
+                    <span id="lessonCount" class="lesson-count"></span>
+                </div>
                 <div id="videoPlaylist" class="video-playlist">
                     <!-- Videos will be loaded by JavaScript -->
                 </div>
@@ -179,7 +203,8 @@ $videoSections = [
                     <br><br>
                     Available by appointment and offered at a separate premium rate.
                 </div>
-                <a href="https://wa.me/96171493997" target="_blank" class="private-session-btn">Request Private Session</a>
+                <a href="https://wa.me/96171493997?text=Hello%2C%20I%20would%20like%20to%20request%20a%20private%20trading%20session.%20Please%20send%20me%20the%20available%20dates%2C%20details%2C%20and%20price."
+                    target="_blank" rel="noopener noreferrer" class="private-session-btn">Request Private Session</a>
             </div>
         </div>
     </div>
@@ -1357,6 +1382,503 @@ $videoSections = [
     }
 </style>
 
+<style>
+    /* Refined course navigation and lesson experience */
+    .section-selector {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(240px, 1.15fr);
+        gap: 1rem;
+        align-items: stretch;
+        margin: 0 0 2rem;
+        padding: 0;
+        overflow: visible;
+    }
+
+    .radio-label {
+        display: block;
+        min-width: 0;
+    }
+
+    .radio-button,
+    .pdf-download-btn {
+        width: 100%;
+        min-height: 76px;
+        padding: 0.9rem 1rem;
+        border: 1px solid rgba(0, 212, 255, 0.22);
+        border-radius: 16px;
+        background: linear-gradient(145deg, rgba(255, 255, 255, .055), rgba(0, 212, 255, .025));
+        color: var(--text-light);
+        display: flex;
+        align-items: center;
+        gap: .8rem;
+        text-align: left;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, .16);
+        transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease, background .25s ease;
+    }
+
+    .radio-button>span:last-child,
+    .pdf-download-btn>span:nth-child(2) {
+        display: grid;
+        gap: .2rem;
+        min-width: 0;
+    }
+
+    .radio-button strong,
+    .pdf-download-btn strong {
+        font-size: .96rem;
+        line-height: 1.2;
+        color: var(--text-light);
+    }
+
+    .radio-button small,
+    .pdf-download-btn small {
+        color: var(--text-muted);
+        font-size: .72rem;
+        font-weight: 500;
+        white-space: nowrap;
+    }
+
+    .module-icon,
+    .workbook-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 13px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 42px;
+        background: rgba(0, 212, 255, .1);
+        color: var(--primary-color);
+        border: 1px solid rgba(0, 212, 255, .25);
+        font-size: .78rem;
+        font-weight: 800;
+    }
+
+    .workbook-icon {
+        background: rgba(231, 76, 60, .12);
+        color: #ff6b6b;
+        border-color: rgba(231, 76, 60, .3);
+        font-size: 1.15rem;
+    }
+
+    .workbook-chevron {
+        margin-left: auto;
+        color: var(--text-muted);
+        font-size: .8rem !important;
+    }
+
+    .radio-label input[type="radio"]:checked+.radio-button {
+        color: var(--text-light);
+        background: linear-gradient(145deg, rgba(0, 212, 255, .18), rgba(0, 184, 148, .08));
+        border-color: var(--primary-color);
+        box-shadow: 0 10px 30px rgba(0, 212, 255, .18), inset 0 0 0 1px rgba(0, 212, 255, .08);
+        transform: translateY(-2px);
+    }
+
+    .radio-label input[type="radio"]:checked+.radio-button .module-icon {
+        background: var(--primary-color);
+        color: #07111f;
+    }
+
+    .radio-label input[type="radio"]:hover+.radio-button,
+    .pdf-download-btn:hover {
+        transform: translateY(-3px);
+        border-color: rgba(0, 212, 255, .65);
+        color: var(--text-light);
+    }
+
+    .pdf-download-wrapper {
+        width: 100%;
+        align-items: stretch;
+    }
+
+    .pdf-lock-overlay {
+        border-radius: 16px;
+    }
+
+    .pdf-menu {
+        left: auto;
+        right: 0;
+        width: min(380px, 90vw);
+        min-width: 0;
+    }
+
+    .video-main-container {
+        grid-template-columns: minmax(0, 1.65fr) minmax(300px, .75fr);
+        gap: 1.25rem;
+        padding: 1rem;
+        border: 1px solid rgba(0, 212, 255, .16);
+        border-radius: 22px;
+        background: linear-gradient(145deg, rgba(255, 255, 255, .035), rgba(0, 0, 0, .08));
+        box-shadow: 0 18px 55px rgba(0, 0, 0, .2);
+    }
+
+    .video-player {
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 12px 35px rgba(0, 0, 0, .35);
+        background: #000;
+    }
+
+    .video-player video {
+        display: block;
+        width: 100%;
+        aspect-ratio: 16/9;
+        object-fit: contain;
+        background: #000;
+    }
+
+    .video-locked-overlay .lock-content {
+        width: auto;
+        min-width: 310px;
+        max-width: 420px;
+        padding: 1.4rem 1.8rem;
+        gap: .75rem;
+        border-width: 1px;
+        border-radius: 12px;
+    }
+
+    .video-locked-overlay .lock-icon {
+        font-size: 2.8rem;
+        margin-bottom: 0;
+    }
+
+    .video-locked-overlay .unlock-title {
+        width: auto;
+        padding: .7rem 1.1rem;
+        font-size: 1.5rem;
+        border-radius: 8px;
+        white-space: nowrap;
+    }
+
+    /* Professional locked-lesson card */
+    .video-locked-overlay {
+        background:
+            radial-gradient(circle at 50% 42%, rgba(0, 212, 255, .12), transparent 38%),
+            rgba(2, 7, 18, .88);
+        backdrop-filter: blur(5px);
+    }
+
+    .video-locked-overlay .lock-content {
+        position: relative;
+        width: min(390px, 72%);
+        min-width: 0;
+        max-width: 390px;
+        padding: 1.6rem 1.8rem 1.45rem;
+        gap: .9rem;
+        border: 1px solid rgba(0, 212, 255, .28);
+        border-radius: 18px;
+        background: linear-gradient(145deg, rgba(19, 31, 57, .94), rgba(7, 13, 30, .96));
+        box-shadow: 0 22px 55px rgba(0, 0, 0, .42), inset 0 1px 0 rgba(255, 255, 255, .06);
+        overflow: hidden;
+    }
+
+    .video-locked-overlay .lock-content::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 18%;
+        right: 18%;
+        height: 3px;
+        border-radius: 0 0 999px 999px;
+        background: linear-gradient(90deg, transparent, var(--primary-color), #00b894, transparent);
+    }
+
+    .video-locked-overlay .lock-icon {
+        width: 64px;
+        height: 64px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0;
+        border-radius: 18px;
+        font-size: 1.65rem;
+        color: var(--primary-color);
+        background: linear-gradient(145deg, rgba(0, 212, 255, .15), rgba(0, 184, 148, .06));
+        border: 1px solid rgba(0, 212, 255, .28);
+        text-shadow: none;
+        filter: none;
+        animation: none;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08);
+    }
+
+    .video-locked-overlay .unlock-title {
+        width: auto;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        background: none;
+        color: #f3fbff;
+        font-size: clamp(1.15rem, 2vw, 1.45rem);
+        font-weight: 800;
+        letter-spacing: .01em;
+        line-height: 1.25;
+        text-shadow: none;
+        animation: none;
+    }
+
+    .video-title {
+        margin-top: .9rem;
+        padding: .1rem .35rem;
+        font-size: 1.15rem;
+        font-weight: 750;
+        color: var(--text-light);
+        text-transform: capitalize;
+    }
+
+    .video-title::before {
+        content: 'NOW PLAYING';
+        display: block;
+        margin-bottom: .3rem;
+        color: var(--primary-color);
+        font-size: .65rem;
+        letter-spacing: .14em;
+        font-weight: 800;
+    }
+
+    .video-playlist-wrapper {
+        max-height: 590px;
+        padding: 1rem;
+        border-radius: 16px;
+        border: 1px solid rgba(0, 212, 255, .14);
+        background: rgba(5, 12, 28, .55);
+        box-shadow: none;
+    }
+
+    .playlist-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: .75rem;
+        padding: .25rem .2rem .85rem;
+        border-bottom: 1px solid rgba(0, 212, 255, .15);
+        margin-bottom: .75rem;
+    }
+
+    .playlist-eyebrow {
+        display: block;
+        color: var(--text-muted);
+        font-size: .62rem;
+        letter-spacing: .13em;
+        font-weight: 800;
+        margin-bottom: .25rem;
+    }
+
+    .playlist-title {
+        margin: 0;
+        padding: 0;
+        border: 0;
+        font-size: 1.05rem;
+        color: var(--text-light);
+    }
+
+    .lesson-count {
+        padding: .35rem .55rem;
+        border-radius: 999px;
+        color: var(--primary-color);
+        background: rgba(0, 212, 255, .1);
+        font-size: .72rem;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .video-playlist {
+        gap: .55rem;
+        padding-right: .25rem;
+    }
+
+    .video-item {
+        min-height: 58px;
+        padding: .65rem .7rem;
+        gap: .7rem;
+        border: 1px solid transparent;
+        border-left: 1px solid transparent;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, .035);
+    }
+
+    .video-item:hover {
+        transform: translateY(-1px);
+        border-color: rgba(0, 212, 255, .28);
+        background: rgba(0, 212, 255, .08);
+    }
+
+    .video-item.active {
+        border-color: rgba(0, 212, 255, .5);
+        background: linear-gradient(90deg, rgba(0, 212, 255, .15), rgba(0, 184, 148, .06));
+    }
+
+    .video-item-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 212, 255, .09);
+        color: var(--primary-color);
+        font-size: .72rem;
+        font-weight: 800;
+        flex: 0 0 34px;
+    }
+
+    .video-item.active .video-item-icon {
+        background: var(--primary-color);
+        color: #06101c;
+    }
+
+    .video-item-title {
+        white-space: normal;
+        line-height: 1.3;
+        font-size: .82rem;
+    }
+
+    .private-session-btn {
+        display: block;
+        width: fit-content;
+        margin: 1.5rem auto 0;
+        text-align: center;
+    }
+
+    @media (max-width: 1100px) {
+        .section-selector {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .video-main-container {
+            grid-template-columns: 1fr;
+        }
+
+        .video-playlist-wrapper {
+            max-height: 430px;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .video-courses-container {
+            padding: .75rem;
+        }
+
+        .section-selector {
+            grid-template-columns: 1fr;
+            gap: .65rem;
+            margin-bottom: 1.2rem;
+            overflow: visible;
+        }
+
+        .radio-button,
+        .pdf-download-btn {
+            min-height: 64px;
+            padding: .7rem .8rem;
+            border-radius: 14px;
+        }
+
+        .module-icon,
+        .workbook-icon {
+            width: 38px;
+            height: 38px;
+            flex-basis: 38px;
+            border-radius: 11px;
+        }
+
+        .radio-button strong,
+        .pdf-download-btn strong {
+            font-size: .9rem;
+        }
+
+        .radio-button small,
+        .pdf-download-btn small {
+            font-size: .68rem;
+        }
+
+        .pdf-lock-overlay {
+            border-radius: 14px;
+        }
+
+        .pdf-menu {
+            position: fixed;
+            left: 50%;
+            right: auto;
+            width: calc(100% - 1rem);
+            min-width: 0;
+        }
+
+        .video-main-container {
+            margin-top: 1rem;
+            padding: .55rem;
+            gap: .8rem;
+            border-radius: 16px;
+        }
+
+        .video-player {
+            border-radius: 12px;
+        }
+
+        .video-locked-overlay .lock-content {
+            min-width: 240px;
+            max-width: 320px;
+            padding: 1rem 1.25rem;
+        }
+
+        .video-locked-overlay .lock-icon { font-size: 2rem; }
+        .video-locked-overlay .unlock-title { font-size: 1.2rem; padding: .55rem .85rem; }
+
+        .video-locked-overlay .lock-content {
+            width: min(280px, 78%);
+            min-width: 0;
+            max-width: 280px;
+            padding: 1.1rem 1rem 1rem;
+            gap: .65rem;
+            border-radius: 14px;
+        }
+
+        .video-locked-overlay .lock-icon {
+            width: 48px;
+            height: 48px;
+            font-size: 1.25rem;
+            border-radius: 13px;
+        }
+
+        .video-locked-overlay .unlock-title {
+            padding: 0;
+            font-size: 1rem;
+        }
+
+        .video-title {
+            font-size: 1rem;
+            padding: 0 .2rem;
+            margin-top: .7rem;
+        }
+
+        .video-playlist-wrapper {
+            padding: .7rem;
+            max-height: none;
+            border-radius: 13px;
+        }
+
+        .video-playlist {
+            max-height: 360px;
+        }
+
+        .video-item {
+            min-height: 54px;
+            padding: .6rem;
+        }
+
+        .video-item-title {
+            font-size: .8rem;
+        }
+
+        .playlist-title {
+            font-size: .95rem;
+        }
+
+        .lesson-count {
+            font-size: .68rem;
+        }
+    }
+</style>
+
 <script>
     // Course price and ID for cart operations
     const coursePrice = 300; // Updated from 0 to 300
@@ -1367,7 +1889,6 @@ $videoSections = [
     function togglePdfMenu() {
         // Check if user has access before allowing dropdown
         if (!hasAccess) {
-            alert('❌ Please purchase the course to download PDFs!');
             return;
         }
 
@@ -1382,7 +1903,6 @@ $videoSections = [
     // Handle PDF Download - Check Access First
     function handlePdfDownload(pdfPath) {
         if (!hasAccess) {
-            alert('❌ Please purchase the course to download PDFs!');
             return;
         }
 
@@ -1436,7 +1956,6 @@ $videoSections = [
         console.log('userId:', userId);
 
         if (!userId || userId === 'null') {
-            alert('❌ Please login to purchase courses!');
             window.location.href = 'login.php';
             return;
         }
@@ -1446,7 +1965,13 @@ $videoSections = [
         console.log('User has existing order:', userHasExistingOrder);
 
         if (userHasExistingOrder) {
-            alert('⚠️ You have already created an order for this course!\n\nYour order is being processed. Please wait for admin approval.\n\nYou can only purchase once.');
+            const cartButton = document.querySelector('.btn-buy-course');
+            if (cartButton) {
+                cartButton.disabled = true;
+                cartButton.textContent = 'Order Already Submitted';
+                cartButton.style.opacity = '0.65';
+                cartButton.style.cursor = 'not-allowed';
+            }
             return;
         }
 
@@ -1459,7 +1984,7 @@ $videoSections = [
         const itemAlreadyInCart = globalCart.items.some(item => item.courseId === 'complete-mastery');
         if (itemAlreadyInCart) {
             console.log('❌ Course already in cart - preventing duplicate');
-            alert('⚠️ This course is already in your cart!\n\nGo to your cart to proceed to checkout.');
+            setCourseAlreadyInCartState();
             return;
         }
 
@@ -1483,9 +2008,17 @@ $videoSections = [
 
         const total = globalCart.getTotal();
 
-        console.log('Redirecting to cart.php instantly');
-        // Redirect to cart immediately
-        window.location.href = 'cart.php';
+        setCourseAlreadyInCartState();
+    }
+
+    function setCourseAlreadyInCartState() {
+        const cartButton = document.querySelector('.btn-buy-course');
+        if (!cartButton || cartButton.tagName !== 'BUTTON') return;
+        cartButton.disabled = true;
+        cartButton.textContent = 'Already in Cart';
+        cartButton.style.opacity = '0.72';
+        cartButton.style.cursor = 'not-allowed';
+        cartButton.onclick = null;
     }
 
     // Function to show visual confirmation when adding to cart
@@ -1629,7 +2162,6 @@ $videoSections = [
         }
 
         console.log('✅ Old orders cleared! Reload the page to see changes');
-        alert('✅ All old orders cleared!\n\nPlease reload this page to see changes.');
         location.reload();
     };
 
@@ -1647,9 +2179,10 @@ $videoSections = [
         try {
             const formData = new FormData();
             formData.append('email', sessionEmail);
-            const response = await fetch('check_access.php', {
+            const response = await fetch('check_access.php?refresh=' + Date.now(), {
                 method: 'POST',
-                body: formData
+                body: formData,
+                cache: 'no-store'
             });
             const data = await response.json();
             return data.has_access === true;
@@ -1664,9 +2197,10 @@ $videoSections = [
         try {
             const formData = new FormData();
             formData.append('email', sessionEmail);
-            const response = await fetch('get_user_orders.php', {
+            const response = await fetch('get_user_orders.php?refresh=' + Date.now(), {
                 method: 'POST',
-                body: formData
+                body: formData,
+                cache: 'no-store'
             });
             const data = await response.json();
             if (data.success && data.orders && data.orders.length > 0) {
@@ -1697,10 +2231,17 @@ $videoSections = [
                 if (video) {
                     video.removeAttribute('disabled');
                     video.controls = true;
+                    if (!video.getAttribute('src')) loadVideo(currentVideoIndex);
                 }
             } else {
                 overlay.style.display = 'flex';
                 overlay.style.visibility = 'visible';
+                const video = document.getElementById('mainVideo');
+                if (video && video.getAttribute('src')) {
+                    video.pause();
+                    video.removeAttribute('src');
+                    video.load();
+                }
             }
         }
         updatePdfLockState();
@@ -1727,12 +2268,10 @@ $videoSections = [
                 // Not logged in
                 e.preventDefault();
                 this.pause();
-                alert('Please login to view courses!');
             } else if (!hasAccess) {
                 // Logged in but not purchased
                 e.preventDefault();
                 this.pause();
-                alert('Please purchase the course to unlock all videos!');
             }
         });
 
@@ -1746,65 +2285,31 @@ $videoSections = [
     }
 
     async function updateCartButtonState() {
-        const cartButton = document.querySelector('.btn-buy-course');
-
-        if (!cartButton) {
-            console.log('⚠️ Add to Cart button not found');
-            return;
-        }
+        const actionArea = document.getElementById('courseActionArea');
+        if (!actionArea) return;
 
         const currentUsername = sessionStorage.getItem('currentUsername');
         const currentEmail = sessionStorage.getItem('currentEmail');
         const isLoggedIn = currentUsername || currentEmail;
 
-        // Not logged in — show login link
-        if (!isLoggedIn && cartButton.tagName === 'BUTTON') {
-            const loginLink = document.createElement('a');
-            loginLink.href = 'login.php?redirect=courses.php';
-            loginLink.className = 'btn-buy-course';
-            loginLink.textContent = 'Login to Purchase';
-            cartButton.parentNode.replaceChild(loginLink, cartButton);
+        if (!isLoggedIn) {
+            actionArea.innerHTML = '<a href="login.php?redirect=courses.php" class="btn-buy-course">Login to Purchase</a>';
             return;
         }
-
-        if (cartButton.tagName === 'A') return;
-        if (cartButton.tagName !== 'BUTTON' || !isLoggedIn) return;
 
         const orderStatus = await checkUserHasOrder();
 
         if (orderStatus === 'unlocked') {
-            // Admin approved — replace button with access granted message
-            const accessDiv = document.createElement('div');
-            accessDiv.className = 'access-granted';
-            accessDiv.textContent = '✓ Course Unlocked - You have full access';
-            cartButton.parentNode.replaceChild(accessDiv, cartButton);
-            console.log('✓ Button replaced with access granted');
-
+            actionArea.innerHTML = '<div class="access-granted">✓ Course Unlocked - You have full access</div>';
         } else if (orderStatus === 'pending') {
-            // Order exists but not yet approved — disable button
-            cartButton.disabled = true;
-            cartButton.style.opacity = '0.5';
-            cartButton.style.cursor = 'not-allowed';
-            cartButton.title = 'Waiting for admin approval';
-            cartButton.textContent = '⏳ Pending Manager Approval';
-            cartButton.onclick = function(e) {
-                e.preventDefault();
-                alert('⚠️ Your order is pending approval.\n\nPlease wait for the manager to approve your order.');
-                return false;
-            };
-            console.log('✓ Cart button disabled - pending approval');
-
+            actionArea.innerHTML = '<button type="button" class="btn-buy-course" disabled style="opacity:.5;cursor:not-allowed;">⏳ Pending Manager Approval</button>';
         } else {
-            // No order or cancelled — enable Enroll Now button
-            cartButton.disabled = false;
-            cartButton.style.opacity = '1';
-            cartButton.style.cursor = 'pointer';
-            cartButton.title = '';
-            cartButton.textContent = 'Enroll Now';
-            cartButton.onclick = function() {
-                addCourseToCart();
-            };
-            console.log('✓ Cart button enabled - no active order');
+            globalCart.load();
+            if (globalCart.items.some(item => item.courseId === 'complete-mastery')) {
+                actionArea.innerHTML = '<button type="button" class="btn-buy-course" disabled style="opacity:.72;cursor:not-allowed;">Already in Cart</button>';
+            } else {
+                actionArea.innerHTML = '<button type="button" class="btn-buy-course" onclick="addCourseToCart()">Enroll Now</button>';
+            }
         }
     }
 
@@ -1828,6 +2333,8 @@ $videoSections = [
 
         // Update section title
         document.getElementById('sectionTitle').textContent = section.title + ' Videos';
+        const lessonCount = document.getElementById('lessonCount');
+        if (lessonCount) lessonCount.textContent = section.videos.length + (section.videos.length === 1 ? ' lesson' : ' lessons');
 
         // Load first video of the section
         if (section.videos.length > 0) {
@@ -1846,11 +2353,20 @@ $videoSections = [
         section.videos.forEach((video, index) => {
             const videoItem = document.createElement('div');
             videoItem.className = 'video-item' + (index === currentVideoIndex ? ' active' : '');
+            videoItem.setAttribute('role', 'button');
+            videoItem.setAttribute('tabindex', '0');
+            videoItem.setAttribute('aria-label', `Play lesson ${index + 1}: ${video.replace('.mp4', '')}`);
             videoItem.innerHTML = `
-                <span class="video-item-icon">▶️</span>
-                <span class="video-item-title">${video}</span>
+                <span class="video-item-icon">${String(index + 1).padStart(2, '0')}</span>
+                <span class="video-item-title">${video.replace('.mp4', '')}</span>
             `;
             videoItem.addEventListener('click', () => loadVideo(index));
+            videoItem.addEventListener('keydown', event => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    loadVideo(index);
+                }
+            });
             playlistDiv.appendChild(videoItem);
         });
     }
@@ -1869,10 +2385,23 @@ $videoSections = [
                 videoFolder = 'videos/Risk%20management/'; // URL encoded space
             }
 
-            const videoPath = videoFolder + videoFile + '?t=' + Date.now();
+            const videoPath = videoFolder + videoFile;
 
             const videoElement = document.getElementById('mainVideo');
-            videoElement.crossOrigin = 'anonymous';
+            document.getElementById('videoTitle').textContent = videoFile.replace('.mp4', '');
+
+            // Keep large lesson files out of the initial page request. Locked users
+            // can browse the syllabus without downloading any video data.
+            if (!hasAccess) {
+                if (videoElement.getAttribute('src')) {
+                    videoElement.pause();
+                    videoElement.removeAttribute('src');
+                    videoElement.load();
+                }
+                updatePlaylist();
+                return;
+            }
+
             videoElement.src = videoPath;
 
             // Add error handling
@@ -1938,29 +2467,29 @@ $videoSections = [
         console.log('Has access to ' + currentSection + ':', hasAccess);
     });
 
-    // Periodic access check (update every 5 seconds for real-time admin unlocks)
-    setInterval(async function() {
-        const newAccess = await checkCourseAccess(currentSection);
-        if (newAccess !== hasAccess) {
-            hasAccess = newAccess;
-            updateAccessStatus();
-            updatePdfLockState();
-            updateCartButtonState();
-        }
-    }, 10000);
+    async function syncCourseApprovalState() {
+        if (document.hidden) return;
+        await updateAccessStatus();
+        await updateCartButtonState();
+        updatePdfLockState();
+    }
+
+    // Keep pending/approved state synchronized with admin actions.
+    setInterval(syncCourseApprovalState, 5000);
 
     // Listen for sessionStorage changes (logout/login from other tabs or login action)
     window.addEventListener('storage', function(e) {
         if (e.key === 'userLogged' || e.key === 'currentUsername' || e.key === 'currentEmail') {
             console.log('Auth status changed! Reloading access check...');
             // User logged in or out - refresh access status
-            const newAccessStatus = checkCourseAccess(currentSection);
-            hasAccess = newAccessStatus;
-            updateAccessStatus();
-            updateCartButtonState();
-            updatePdfLockState();
+            syncCourseApprovalState();
         }
     });
+
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) syncCourseApprovalState();
+    });
+    window.addEventListener('focus', syncCourseApprovalState);
 
     // Listen for logout event from same tab
     window.addEventListener('userLogout', function() {

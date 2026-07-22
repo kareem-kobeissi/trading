@@ -414,12 +414,14 @@ body {
     height: 70px;
     object-fit: cover;
     border-radius: 50%;
-    filter: drop-shadow(0 2px 8px rgba(0, 212, 255, 0.3));
+    filter: none;
+    box-shadow: none;
     transition: var(--transition);
 }
 
 .nav-brand .logo:hover .logo-img {
-    filter: drop-shadow(0 4px 12px rgba(0, 212, 255, 0.5));
+    filter: none;
+    box-shadow: none;
 }
 
 .nav-brand .logo:hover {
@@ -4635,6 +4637,7 @@ html[dir="rtl"] .nav-links a::after {
 
 html[dir="rtl"] .nav-links li {
     margin: 1.2rem 0;
+}
 
     html[dir="rtl"] .nav-links li a {
         display: block;
@@ -4990,3 +4993,139 @@ html[dir="rtl"] .nav-links li {
             }
         }
     }
+
+/* ===== CONSISTENT BRAND TITLE COLOR ===== */
+:root {
+    --brand-title-gradient: linear-gradient(135deg, #ffffff 30%, var(--primary-color));
+}
+
+/* Website name uses the same rendered color as the home-page hero title. */
+.nav-brand .logo .logo-text,
+.footer-brand-text {
+    color: #eefaff !important;
+    background: var(--brand-title-gradient) !important;
+    background-clip: text !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+}
+
+h1,
+h2,
+h3:not(.stat-value),
+.section-title,
+.form-title,
+.course-title,
+.video-title,
+.playlist-title,
+.private-training-title,
+.admin-title,
+.dashboard-title,
+.footer-links-title,
+.footer-social-title,
+.hero-content h1,
+.broker-title,
+.broker-hero-title,
+.broker-features-title,
+.broker-cta-title,
+.about-main-title,
+.about-cta-title,
+.contact-title,
+.cart-main-title,
+.cart-summary h3,
+.course-header h2,
+.info-header h2,
+.philosophy-container h2,
+.mission-container h2 {
+    color: #eefaff !important;
+    background: var(--brand-title-gradient) !important;
+    background-clip: text !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+}
+
+/* ===== CONSISTENT RESPONSIVE TYPOGRAPHY ===== */
+:root {
+    --type-page-title: clamp(2.25rem, 4vw, 3.25rem);
+    --type-section-title: clamp(1.7rem, 2.8vw, 2.25rem);
+    --type-card-title: clamp(1.15rem, 1.6vw, 1.35rem);
+    --type-subtitle: clamp(1rem, 1.25vw, 1.15rem);
+    --type-body: 1rem;
+}
+
+/* Main title shown at the top of each page. */
+h1,
+.about-main-title,
+.broker-hero-title,
+.contact-title,
+.cart-main-title,
+.checkout-title,
+.indicators-title {
+    font-size: var(--type-page-title) !important;
+    line-height: 1.14 !important;
+    letter-spacing: -.025em !important;
+}
+
+/* Major section headings used throughout every page. */
+h2,
+.section-title,
+.broker-title,
+.broker-features-title,
+.broker-cta-title,
+.about-cta-title,
+.private-training-title,
+.admin-title,
+.dashboard-title,
+.form-title {
+    font-size: var(--type-section-title) !important;
+    line-height: 1.2 !important;
+    letter-spacing: -.015em !important;
+}
+
+/* Card, playlist and smaller content headings. */
+h3:not(.stat-value),
+h4,
+.course-title,
+.video-title,
+.playlist-title,
+.footer-links-title,
+.footer-social-title,
+.broker-feature-name {
+    font-size: var(--type-card-title) !important;
+    line-height: 1.3 !important;
+}
+
+/* Introductory text directly below page and section titles. */
+.subtitle,
+.about-subtitle,
+.broker-hero-subtitle,
+.broker-features-subtitle,
+.contact-subtitle,
+.cart-subtitle,
+.checkout-subtitle,
+.indicators-subtitle,
+.private-training-subtitle,
+.about-cta-subtitle {
+    font-size: var(--type-subtitle) !important;
+    line-height: 1.6 !important;
+}
+
+@media (max-width: 640px) {
+    :root {
+        --type-page-title: clamp(1.75rem, 8vw, 2.2rem);
+        --type-section-title: clamp(1.4rem, 6vw, 1.75rem);
+        --type-card-title: clamp(1.02rem, 4.5vw, 1.18rem);
+        --type-subtitle: .96rem;
+        --type-body: .95rem;
+    }
+
+    h1, h2, h3, h4,
+    .section-title,
+    .about-main-title,
+    .broker-hero-title,
+    .contact-title,
+    .cart-main-title,
+    .checkout-title,
+    .indicators-title {
+        overflow-wrap: anywhere;
+    }
+}

@@ -23,10 +23,10 @@
             <div class="footer-brand-minimal">
                 <a href="index.php" class="footer-logo">
                     <div class="footer-logo-wrapper">
-                        <img src="hsenn.jpeg" alt="TheTradingRoutine Logo" class="footer-logo-img">
+                        <img src="hsenn.jpeg" alt="THE TRΛDING ROUTINE Logo" class="footer-logo-img">
                         <div class="logo-glow-ring"></div>
                     </div>
-                    <span class="footer-brand-text">The<span class="blue-text">Tra</span><span class="green-text">ding</span>Routine</span>
+                    <span class="footer-brand-text">THE TRΛDING ROUTINE</span>
                 </a>
                 <p class="footer-tagline" data-i18n="footerTagline">
                     Built for traders who want structure, discipline, and real market understanding. </p>
@@ -103,7 +103,7 @@
 
         <div class="footer-copy-row">
             <div class="footer-left">
-                <p class="copyright-text">&copy; 2026 TheTradingRoutine. All rights reserved.</p>
+                <p class="copyright-text">&copy; 2026 THE TRΛDING ROUTINE. All rights reserved.</p>
             </div>
 
         </div>
@@ -273,6 +273,140 @@
         color: var(--text-muted);
         opacity: 0.7;
     }
+
+    /* Compact footer height on laptop and phone */
+    .simple-footer {
+        margin-top: 45px;
+        padding-bottom: 12px;
+    }
+
+    .footer-wave {
+        height: 38px;
+        margin-bottom: 18px;
+    }
+
+    .footer-main-row {
+        gap: 32px;
+        margin-bottom: 18px;
+    }
+
+    .footer-brand-minimal .footer-logo {
+        margin-bottom: 10px;
+        gap: 10px;
+    }
+
+    .footer-logo-img {
+        width: 52px;
+        height: 52px;
+        aspect-ratio: 1 / 1;
+        border-radius: 50% !important;
+        object-fit: cover;
+        border: none;
+        filter: none;
+        box-shadow: none;
+    }
+
+    .footer-brand-minimal .footer-logo:hover .footer-logo-img {
+        filter: none;
+        box-shadow: none;
+    }
+
+    .logo-glow-ring {
+        display: none;
+    }
+
+    .footer-tagline {
+        margin-bottom: 10px;
+        line-height: 1.45;
+    }
+
+    .footer-links-title,
+    .footer-social-title {
+        margin-bottom: 12px;
+    }
+
+    .footer-links-title {
+        display: block;
+        margin: 0 0 28px !important;
+        padding-bottom: 8px;
+        line-height: 1.3;
+    }
+
+    .footer-links-title + .footer-nav-simple,
+    .footer-links-column .footer-nav-simple {
+        margin-top: 8px;
+    }
+
+    .footer-nav-simple {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(85px, 1fr));
+        gap: 2px 14px;
+    }
+
+    .footer-nav-simple a {
+        padding: 4px 0;
+        font-size: 0.88rem;
+    }
+
+    .footer-social-simple { gap: 9px; }
+    .social-icon-wrapper { width: 39px; height: 39px; border-radius: 10px; }
+
+    .download-section {
+        margin-top: 0.9rem;
+        padding-top: 0.9rem;
+    }
+
+    .download-link { width: 40px; height: 40px; }
+    .download-logo { width: 23px; height: 23px; }
+
+    .trading-hours-badge {
+        margin-top: 13px;
+        padding: 8px 14px;
+        font-size: 0.78rem;
+    }
+
+    .footer-bottom-divider { margin: 16px 0 8px; }
+    .footer-copy-row { padding: 10px 0; justify-content: center; text-align: center; }
+    .footer-left { flex: 0 1 auto; width: 100%; text-align: center; }
+    .copyright-text { margin: 0; }
+
+    @media (max-width: 768px) {
+        .simple-footer { margin-top: 32px; padding: 0 1rem 10px; }
+        .footer-wave { height: 24px; margin-bottom: 10px; }
+        .footer-main-row { gap: 18px; margin-bottom: 10px; }
+        .footer-brand-text { font-size: 1rem; }
+        .footer-tagline { max-width: 440px; margin: 0 auto 5px; font-size: 0.82rem; line-height: 1.4; }
+        .footer-links-title, .footer-social-title { font-size: 0.95rem; margin-bottom: 10px; }
+        .footer-links-title { margin-bottom: 24px !important; }
+        .footer-nav-simple {
+            display: grid !important;
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 8px !important;
+            max-width: 340px;
+            margin: 0 auto !important;
+        }
+        .footer-nav-simple a {
+            width: auto !important;
+            min-height: 36px;
+            padding: 7px 10px;
+            justify-content: flex-start !important;
+            gap: 7px;
+            font-size: 0.82rem;
+            border-radius: 9px;
+            background: rgba(255,255,255,.035);
+            border: 1px solid rgba(255,255,255,.06);
+        }
+        .footer-nav-simple a .nav-dot { width: 6px; height: 6px; flex-shrink: 0; }
+        .download-section { margin-top: .7rem; padding-top: .7rem; }
+        .trading-hours-badge { margin-top: 10px; }
+        .footer-bottom-divider { margin: 12px 0 5px; }
+        .footer-copy-row { padding: 6px 0; gap: 8px; font-size: .78rem; }
+    }
+
+    @media (max-width: 380px) {
+        .footer-nav-simple { grid-template-columns: 1fr !important; max-width: 240px; }
+        .footer-nav-simple a { justify-content: center !important; }
+    }
 </style>
 
 <script>
@@ -318,7 +452,7 @@
     }
 </script>
 
-<script src="main.js"></script>
+<script src="main.js?v=<?php echo file_exists(__DIR__ . '/main.js') ? filemtime(__DIR__ . '/main.js') : time(); ?>"></script>
 </body>
 
 </html>
