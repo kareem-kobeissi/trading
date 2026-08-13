@@ -169,6 +169,18 @@ try {
             // Log the SMTP error and use the hosting provider's native mail
             // transport as a production fallback.
             error_log("Email sending error: " . $e->getMessage());
+            $signupLogDir = __DIR__ . '/logs';
+            if (!is_dir($signupLogDir)) @mkdir($signupLogDir, 0755, true);
+            $safeLogMessage = preg_replace(
+                '/(?:sk-(?:proj-)?[A-Za-z0-9_-]+|[A-Za-z0-9+\/=]{32,})/',
+                '[redacted]',
+                $e->getMessage()
+            );
+            @file_put_contents(
+                $signupLogDir . '/signup_email_errors.log',
+                '[' . date('Y-m-d H:i:s') . '] ' . get_class($e) . ': ' . $safeLogMessage . PHP_EOL,
+                FILE_APPEND | LOCK_EX
+            );
             $errorMessage = strtolower($e->getMessage());
             if (str_contains($errorMessage, 'authentication') || str_contains($errorMessage, 'smtp 535')) {
                 $deliveryDiagnostic = 'smtp_authentication_failed';
