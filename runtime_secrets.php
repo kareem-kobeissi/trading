@@ -17,9 +17,7 @@ function loadRuntimeSecrets()
     foreach ($secrets as $key => $value) {
         if (!is_string($key) || !preg_match('/^[A-Z][A-Z0-9_]*$/', $key)) continue;
         if (getenv($key) !== false && getenv($key) !== '') continue;
-        $stringValue = (string) $value;
-        putenv($key . '=' . $stringValue);
-        $_ENV[$key] = $stringValue;
+        $_ENV[$key] = (string) $value;
     }
 }
 
