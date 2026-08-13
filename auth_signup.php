@@ -99,6 +99,7 @@ try {
 
         // Send email with verification code
         $emailSent = false;
+        $deliveryDiagnostic = 'unknown';
         try {
             require_once 'api/mail-config.php';
 
@@ -153,6 +154,7 @@ try {
                     require_once 'libs/GmailSMTP.php';
                     $smtp = new GmailSMTP(GMAIL_ADDRESS, $smtpPassword, $smtpDebug, SMTP_HOST, SMTP_PORT, $smtpCaFile, $smtpVerifyTls);
                     $emailSent = $smtp->sendEmail($email, $subject, $htmlMessage);
+                    $deliveryDiagnostic = $emailSent ? 'smtp_accepted' : 'smtp_rejected';
                 }
             }
 
@@ -167,12 +169,23 @@ try {
             // Log the SMTP error and use the hosting provider's native mail
             // transport as a production fallback.
             error_log("Email sending error: " . $e->getMessage());
+            $errorMessage = strtolower($e->getMessage());
+            if (str_contains($errorMessage, 'authentication') || str_contains($errorMessage, 'smtp 535')) {
+                $deliveryDiagnostic = 'smtp_authentication_failed';
+            } elseif (str_contains($errorMessage, 'certificate') || str_contains($errorMessage, 'tls')) {
+                $deliveryDiagnostic = 'smtp_tls_failed';
+            } elseif (str_contains($errorMessage, 'connect')) {
+                $deliveryDiagnostic = 'smtp_connection_failed';
+            } else {
+                $deliveryDiagnostic = 'smtp_failed';
+            }
             if (isset($subject, $htmlMessage) && defined('GMAIL_ADDRESS') && GMAIL_ADDRESS !== '') {
                 $fallbackHeaders = "From: " . GMAIL_ADDRESS . "\r\n";
                 $fallbackHeaders .= "Reply-To: " . GMAIL_ADDRESS . "\r\n";
                 $fallbackHeaders .= "MIME-Version: 1.0\r\n";
                 $fallbackHeaders .= "Content-Type: text/html; charset=UTF-8\r\n";
                 $emailSent = @mail($email, $subject, $htmlMessage, $fallbackHeaders);
+                if (!$emailSent) $deliveryDiagnostic .= '_and_native_mail_failed';
             } else {
                 $emailSent = false;
             }
@@ -189,7 +202,11 @@ try {
 
             ob_end_clean();
             http_response_code(500);
-            echo json_encode(['success' => false, 'message' => 'Failed to send verification code. Please try again.']);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Failed to send verification code. Please try again.',
+                'diagnostic' => $deliveryDiagnostic
+            ]);
             exit;
         }
 
