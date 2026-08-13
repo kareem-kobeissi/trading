@@ -5,6 +5,23 @@ ob_start();
 // Set JSON header first
 header('Content-Type: application/json; charset=utf-8');
 
+register_shutdown_function(function () {
+    $error = error_get_last();
+    $fatalTypes = [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR];
+    if (!$error || !in_array($error['type'], $fatalTypes, true)) return;
+    if (!headers_sent()) {
+        http_response_code(500);
+        header('Content-Type: application/json; charset=utf-8');
+    }
+    while (ob_get_level() > 0) ob_end_clean();
+    error_log('Signup fatal error: ' . $error['message'] . ' in ' . $error['file'] . ':' . $error['line']);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Signup server configuration error',
+        'diagnostic' => basename($error['file']) . ':' . $error['line']
+    ]);
+});
+
 // Disable error display
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
