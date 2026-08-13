@@ -12,7 +12,7 @@ ini_set('display_errors', 0);
 // Get config
 try {
     require_once 'config.php';
-} catch (Exception $e) {
+} catch (Throwable $e) {
     ob_end_clean();
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'Database error']);
@@ -146,7 +146,7 @@ try {
                 $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
                 $emailSent = @mail($email, $subject, $htmlMessage, $headers);
             }
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             // Log error but don't expose it
             error_log("Email sending error: " . $e->getMessage());
             $emailSent = false;
@@ -420,7 +420,7 @@ try {
         'email' => $email,
         'admin_notification_sent' => $adminNotificationSent
     ]);
-} catch (Exception $e) {
+} catch (Throwable $e) {
     ob_end_clean();
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);

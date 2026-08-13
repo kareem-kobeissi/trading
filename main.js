@@ -431,12 +431,17 @@ document.addEventListener('DOMContentLoaded', function () {
                     });
 
                     console.log('Send code response status:', response.status);
-
-                    if (!response.ok) {
-                        throw new Error('Server error: ' + response.status);
+                    const responseText = await response.text();
+                    let result;
+                    try {
+                        result = JSON.parse(responseText);
+                    } catch (_) {
+                        throw new Error(`Signup server error (${response.status}).`);
                     }
 
-                    const result = await response.json();
+                    if (!response.ok) {
+                        throw new Error(result.message || `Signup failed (${response.status})`);
+                    }
                     console.log('Send code result:', result);
 
                     if (result.success) {
