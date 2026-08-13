@@ -50,9 +50,9 @@ try {
 
     // The administrator uses the normal login form. Credentials stay in the
     // private server configuration and are never stored in JavaScript.
-    $adminEmail = trim((string) (getenv('ADMIN_EMAIL') ?: ''));
-    $adminPasswordHash = trim((string) (getenv('ADMIN_PASSWORD_HASH') ?: ''));
-    $adminPassword = (string) (getenv('ADMIN_PASSWORD') ?: '');
+    $adminEmail = trim(runtimeSecret('ADMIN_EMAIL'));
+    $adminPasswordHash = trim(runtimeSecret('ADMIN_PASSWORD_HASH'));
+    $adminPassword = runtimeSecret('ADMIN_PASSWORD');
     $adminPasswordValid = $adminPasswordHash !== ''
         ? password_verify($password, $adminPasswordHash)
         : ($adminPassword !== '' && hash_equals($adminPassword, $password));

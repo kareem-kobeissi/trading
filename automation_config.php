@@ -9,6 +9,7 @@
  */
 function automationConfig($key, $default = '')
 {
+    if (function_exists('runtimeSecret')) return runtimeSecret($key, $default);
     $value = getenv($key);
     return $value === false || $value === '' ? $default : $value;
 }

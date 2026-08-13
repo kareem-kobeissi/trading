@@ -11,9 +11,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $email = trim((string) ($_POST['email'] ?? ''));
 $password = (string) ($_POST['password'] ?? '');
-$adminEmail = trim((string) (getenv('ADMIN_EMAIL') ?: ''));
-$adminPasswordHash = trim((string) (getenv('ADMIN_PASSWORD_HASH') ?: ''));
-$adminPassword = (string) (getenv('ADMIN_PASSWORD') ?: '');
+$adminEmail = trim(runtimeSecret('ADMIN_EMAIL'));
+$adminPasswordHash = trim(runtimeSecret('ADMIN_PASSWORD_HASH'));
+$adminPassword = runtimeSecret('ADMIN_PASSWORD');
 
 $passwordValid = $adminPasswordHash !== ''
     ? password_verify($password, $adminPasswordHash)
