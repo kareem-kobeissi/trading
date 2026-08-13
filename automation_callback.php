@@ -31,11 +31,21 @@ if (!hash_equals($expectedSignature, $providedSignature)) {
 
 $input = json_decode($rawBody, true);
 $orderId = (int) ($input['order_id'] ?? 0);
+$orderReference = trim((string) ($input['order_reference'] ?? ''));
 $event = (string) ($input['event'] ?? '');
-if (!$orderId || !in_array($event, ['message.sent', 'message.received', 'review.updated'], true)) {
+if ((!$orderId && $orderReference === '') || !in_array($event, ['message.sent', 'message.received', 'review.updated'], true)) {
     http_response_code(422);
     echo json_encode(['success' => false, 'message' => 'Invalid callback payload']);
     exit;
+}
+
+if (!$orderId && $orderReference !== '') {
+    $referenceStmt = $conn->prepare('SELECT id FROM orders WHERE order_ref = ? LIMIT 1');
+    $referenceStmt->bind_param('s', $orderReference);
+    $referenceStmt->execute();
+    $referenceRow = $referenceStmt->get_result()->fetch_assoc();
+    $referenceStmt->close();
+    $orderId = (int) ($referenceRow['id'] ?? 0);
 }
 
 $schemaError = ensureAutomationSchema($conn);
@@ -45,10 +55,11 @@ if ($schemaError) {
     exit;
 }
 
-$orderCheck = $conn->prepare('SELECT id FROM orders WHERE id = ? LIMIT 1');
+$orderCheck = $conn->prepare('SELECT id, email FROM orders WHERE id = ? LIMIT 1');
 $orderCheck->bind_param('i', $orderId);
 $orderCheck->execute();
-$orderExists = $orderCheck->get_result()->num_rows === 1;
+$orderRow = $orderCheck->get_result()->fetch_assoc();
+$orderExists = (bool) $orderRow;
 $orderCheck->close();
 if (!$orderExists) {
     http_response_code(404);
@@ -69,6 +80,38 @@ if ($event === 'message.sent' || $event === 'message.received') {
     $summary = trim((string) ($message['summary'] ?? ''));
     $attachmentUrl = trim((string) ($message['attachment_url'] ?? ''));
     $externalId = substr(trim((string) ($message['external_id'] ?? '')), 0, 255);
+
+    if ($event === 'message.received' && strcasecmp($sender, (string) $orderRow['email']) !== 0) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'message' => 'Reply sender does not match the order customer']);
+        exit;
+    }
+
+    $savedAttachments = [];
+    $attachments = is_array($message['attachments'] ?? null) ? $message['attachments'] : [];
+    $allowedTypes = [
+        'image/jpeg' => 'jpg',
+        'image/png' => 'png',
+        'image/webp' => 'webp',
+        'application/pdf' => 'pdf'
+    ];
+    foreach (array_slice($attachments, 0, 5) as $attachment) {
+        $contentType = strtolower(trim((string) ($attachment['content_type'] ?? '')));
+        $encoded = (string) ($attachment['data_base64'] ?? '');
+        if (!isset($allowedTypes[$contentType]) || $encoded === '') continue;
+        $binary = base64_decode($encoded, true);
+        if ($binary === false || strlen($binary) > 4 * 1024 * 1024) continue;
+        $relativeDir = 'uploads/automation/' . $orderId;
+        $absoluteDir = __DIR__ . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relativeDir);
+        if (!is_dir($absoluteDir) && !mkdir($absoluteDir, 0755, true) && !is_dir($absoluteDir)) continue;
+        $filename = bin2hex(random_bytes(16)) . '.' . $allowedTypes[$contentType];
+        if (file_put_contents($absoluteDir . DIRECTORY_SEPARATOR . $filename, $binary, LOCK_EX) !== false) {
+            $savedAttachments[] = $relativeDir . '/' . $filename;
+        }
+    }
+    if ($savedAttachments) {
+        $attachmentUrl = json_encode($savedAttachments, JSON_UNESCAPED_SLASHES);
+    }
 
     if ($original === '') {
         http_response_code(422);
@@ -101,6 +144,7 @@ if ($event === 'message.sent' || $event === 'message.received') {
 }
 
 $review = $input['review'] ?? [];
+if (empty($input['preserve_review'])) {
 $allowedContact = ['not_contacted', 'contacted', 'waiting_for_proof', 'proof_received', 'needs_admin_review'];
 $allowedRecommendation = ['pending', 'likely_valid', 'likely_invalid', 'needs_review'];
 $contactStatus = in_array(($review['contact_status'] ?? ''), $allowedContact, true)
@@ -135,6 +179,7 @@ $stmt->bind_param(
 );
 $stmt->execute();
 $stmt->close();
+}
 
 echo json_encode(['success' => true]);
 $conn->close();

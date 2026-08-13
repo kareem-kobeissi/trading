@@ -494,20 +494,28 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
 
-            // Check for admin login
-            if (email === 'Admin@thetradingroutine.com' && password === '123456') {
-              // REPLACE WITH:
-const adminTabId = 'tab_' + Date.now();
-localStorage.setItem('adminLogged', 'true');
-localStorage.setItem('adminEmail', email);
-localStorage.setItem('adminTabId', adminTabId);
-sessionStorage.setItem('myAdminTabId', adminTabId);
+            if (loginForm.dataset.adminLogin === 'true') {
+                const adminBody = new URLSearchParams({ email, password });
+                const adminResponse = await fetch('auth_admin.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: adminBody.toString()
+                });
+                const adminResult = await adminResponse.json();
+                if (!adminResponse.ok || !adminResult.success) {
+                    alert(adminResult.message || 'Administrator login failed');
+                    return;
+                }
+                const adminTabId = 'tab_' + Date.now();
+                localStorage.setItem('adminLogged', 'true');
+                localStorage.setItem('adminEmail', email);
+                localStorage.setItem('adminTabId', adminTabId);
+                sessionStorage.setItem('myAdminTabId', adminTabId);
                 if (rememberMe) {
                     localStorage.setItem('savedEmail', email);
                 } else {
                     localStorage.removeItem('savedEmail');
                 }
-                alert('Admin login successful! Redirecting to dashboard...');
                 window.location.href = 'admin_dashboard.php';
                 return;
             }

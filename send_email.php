@@ -5,10 +5,16 @@ error_reporting(E_ALL);
 ini_set('display_errors', 0);
 
 header('Content-Type: application/json');
+require_once __DIR__ . '/config.php';
+
+if (empty($_SESSION['is_admin']) && empty($_SESSION['admin_logged_in'])) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'Administrator authentication required']);
+    exit;
+}
 
 // Create detailed debug log
 $debugLog = "DEBUG LOG: " . date('Y-m-d H:i:s') . "\n";
-$debugLog .= "POST data: " . json_encode($_POST) . "\n";
 
 $response = ['success' => false, 'message' => ''];
 

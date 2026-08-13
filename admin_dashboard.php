@@ -1,6 +1,11 @@
 <?php
 // admin_dashboard.php
-include 'header.php'; // Using main header for consistency, but admin might need specific links
+require_once __DIR__ . '/config.php';
+if (empty($_SESSION['is_admin']) && empty($_SESSION['admin_logged_in'])) {
+    header('Location: admin_login.php');
+    exit;
+}
+include 'header.php';
 ?>
 <style>
     .admin-layout {
@@ -877,9 +882,37 @@ include 'header.php'; // Using main header for consistency, but admin might need
     </div>
 </section>
 
-<!-- 
-    REPLACE the entire <script>...</script> block in admin_dashboard.php with this
--->
+<div id="automationModal" class="automation-modal" hidden>
+    <div class="automation-modal-card" role="dialog" aria-modal="true" aria-labelledby="automationModalTitle">
+        <button type="button" class="automation-close" onclick="closeAutomationPanel()" aria-label="Close">&times;</button>
+        <h2 id="automationModalTitle">Customer Conversation Review</h2>
+        <div id="automationReviewSummary" class="automation-review-summary"></div>
+        <div id="automationMessages" class="automation-messages"></div>
+        <p class="automation-advisory">AI recommendations are advisory. Approve or reject using the order controls after reviewing the evidence.</p>
+    </div>
+</div>
+
+<style>
+    .automation-modal { position: fixed; inset: 0; z-index: 10000; padding: 4vh 1rem; background: rgba(3,8,24,.82); overflow-y: auto; }
+    .automation-modal[hidden] { display: none; }
+    .automation-modal-card { position: relative; width: min(860px, 100%); margin: auto; padding: 1.5rem; border: 1px solid rgba(0,212,255,.28); border-radius: 18px; background: #0d1730; box-shadow: 0 24px 80px rgba(0,0,0,.55); }
+    .automation-modal-card h2 { margin: 0 2.5rem 1rem 0; color: var(--primary-color); }
+    .automation-close { position: absolute; right: 1rem; top: .8rem; border: 0; background: transparent; color: #fff; font-size: 2rem; cursor: pointer; }
+    .automation-review-summary { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: .75rem; margin-bottom: 1rem; padding: 1rem; border-radius: 12px; background: rgba(0,212,255,.06); }
+    .automation-review-summary div { color: #dbeafe; }
+    .automation-review-summary strong { color: #78e8ff; }
+    .automation-messages { display: grid; gap: .9rem; }
+    .automation-message { padding: 1rem; border: 1px solid rgba(255,255,255,.1); border-radius: 12px; background: rgba(255,255,255,.035); }
+    .automation-message.incoming { border-color: rgba(245,157,0,.35); }
+    .automation-message-meta { margin-bottom: .65rem; color: #8da2c8; font-size: .8rem; }
+    .automation-message h4 { margin: .75rem 0 .35rem; color: #78e8ff; }
+    .automation-message pre { margin: 0; color: #eef4ff; white-space: pre-wrap; word-break: break-word; font: inherit; line-height: 1.55; }
+    .automation-proof-links { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .75rem; }
+    .automation-proof-links a { padding: .45rem .7rem; border-radius: 8px; background: rgba(0,212,255,.12); color: #78e8ff; text-decoration: none; }
+    .automation-advisory { margin: 1rem 0 0; color: #f7c66b; font-size: .85rem; }
+    @media (max-width: 600px) { .automation-review-summary { grid-template-columns: 1fr; } .automation-modal-card { padding: 1rem; } }
+</style>
+
 <script>
     function checkAdminAuth() {
         // No auth check - admin access is unrestricted
@@ -948,10 +981,9 @@ include 'header.php'; // Using main header for consistency, but admin might need
                 } else if (order.status === 'unlocked') {
                     actionBtn = `<button class="unlock-btn" onclick="updateOrder('revert_item','${orderId}',${dbId},${itemId})" style="background-color:#f59d00;cursor:pointer;">↩️ ${t('revert')}</button>`;
                 } else {
-                    actionBtn = `<button class="unlock-btn" onclick="updateOrder('approve_item','${orderId}',${dbId},${itemId})"> ${t('approve')}</button>`;
+                    actionBtn = `<button class="unlock-btn" onclick="updateOrder('approve_item','${orderId}',${dbId},${itemId})" style="background-color:#00b894;cursor:pointer;font-weight:bold;padding:0.45rem 0.85rem;font-size:0.85rem;box-shadow:0 0 10px rgba(0,184,148,0.4);">✓ Approve</button>
+                                 <button class="unlock-btn" onclick="updateOrder('cancel_item','${orderId}',${dbId},${itemId})" style="background-color:#ff6b6b;cursor:pointer;margin-left:0.3rem;">✕ Reject</button>`;
                 }
-
-
 
                 const createdDisplay = order.createdTime ? new Date(order.createdTime).toLocaleString('en-US', {
                     year: 'numeric',
@@ -966,21 +998,23 @@ include 'header.php'; // Using main header for consistency, but admin might need
                     <td>${order.name}</td>
                     <td>${order.phone}</td>
                     <td>${order.email}</td>
-<td>
-    ${order.product_type === 'ea' ? 'TTR Risk Calculator' : 
-      order.product_type === 'robot' ? 'TTR Robot' : 
-      order.product_type === 'robot_sr' ? 'S&R Precision EA' : 
-      order.product_type === 'robot_ib' ? 'Instant Breakout EA' : 
-      'Trading Mastery Course'}
-</td>                    <td>${createdDisplay}</td>
+                    <td>
+                        ${order.product_type === 'ea' ? 'TTR Risk Calculator' :
+                          order.product_type === 'robot' ? 'TTR Robot' :
+                          order.product_type === 'robot_sr' ? 'S&R Precision EA' :
+                          order.product_type === 'robot_ib' ? 'Instant Breakout EA' :
+                          order.product_type === 'indicator' ? 'The Holly Grail Indicator' :
+                          'Trading Mastery Course'}
+                    </td>
+                    <td>${createdDisplay}</td>
                     <td title="Includes 1% processing fee">$${parseFloat(order.total).toFixed(2)} USD</td>
                     <td><span class="status-badge ${statusClass}">${statusText}</span></td>
                     <td>
                         ${actionBtn}
-                        <button class="delete-btn" onclick="updateOrder('cancel_item','${orderId}',${dbId},${itemId})" style="margin-left:0.5rem;">${t('delete')}</button>
-                        <button class="delete-btn" onclick="updateOrder('delete_item','${orderId}',${dbId},${itemId})" style="margin-left:0.3rem;background-color:#991b1b;"> Remove</button>
+                        <button class="unlock-btn" onclick="updateOrder('delete_item','${orderId}',${dbId},${itemId})" style="margin-left:0.3rem;background:#e63946;cursor:pointer;" title="Permanently Delete Order">🗑️ Delete</button>
                         <button class="unlock-btn" onclick="downloadCustomerExcel('${encodeURIComponent(order.email)}')" style="margin-left:0.3rem;background:#087f5b;">Excel</button>
                         <button class="unlock-btn" onclick="openCustomerHistory('${encodeURIComponent(order.email)}')" style="margin-left:0.3rem;background:#364fc7;">History</button>
+                        <button class="unlock-btn" onclick="openAutomationPanel(${dbId})" style="margin-left:0.3rem;background:#0b7285;">Conversation</button>
                     </td>
                 </tr>`;
             });
@@ -1061,11 +1095,6 @@ include 'header.php'; // Using main header for consistency, but admin might need
             const result = await response.json();
 
             if (result.success) {
-                if (action === 'approve_item') {
-                    sendApprovalEmail(orderId, orderDetails);
-                } else if (action === 'cancel_item' || action === 'delete_item') {
-                    sendCancellationEmail(orderId, orderDetails);
-                }
                 loadOrders();
             } else {
                 alert('Error: ' + result.message);
@@ -1073,6 +1102,62 @@ include 'header.php'; // Using main header for consistency, but admin might need
         } catch (err) {
             alert('Request failed: ' + err.message);
         }
+    }
+
+    function escapeAutomationHtml(value) {
+        return String(value ?? '').replace(/[&<>'"]/g, char => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+        })[char]);
+    }
+
+    function attachmentLinks(raw) {
+        if (!raw) return '';
+        let links = [];
+        try { links = JSON.parse(raw); } catch (_) { links = [raw]; }
+        links = Array.isArray(links) ? links : [];
+        const safeLinks = links.filter(link => /^uploads\/automation\/\d+\/[a-f0-9]+\.(?:jpg|png|webp|pdf)$/i.test(link));
+        if (!safeLinks.length) return '';
+        return `<div class="automation-proof-links">${safeLinks.map((link, index) =>
+            `<a href="download_automation_attachment.php?path=${encodeURIComponent(link)}" target="_blank" rel="noopener">View proof ${index + 1}</a>`
+        ).join('')}</div>`;
+    }
+
+    async function openAutomationPanel(orderId) {
+        const modal = document.getElementById('automationModal');
+        const summary = document.getElementById('automationReviewSummary');
+        const messages = document.getElementById('automationMessages');
+        modal.hidden = false;
+        summary.innerHTML = '<div>Loading review...</div>';
+        messages.innerHTML = '';
+        try {
+            const response = await fetch(`get_order_automation.php?order_id=${encodeURIComponent(orderId)}`, { cache: 'no-store' });
+            const data = await response.json();
+            if (!response.ok || !data.success) throw new Error(data.message || 'Unable to load conversation');
+            const review = data.review || {};
+            const recommendationLabels = {
+                likely_valid: 'Approve recommended', likely_invalid: 'Reject recommended',
+                needs_review: 'Needs review', pending: 'Keep pending'
+            };
+            summary.innerHTML = `
+                <div><strong>Contact:</strong> ${escapeAutomationHtml(review.contact_status || 'not contacted')}</div>
+                <div><strong>AI recommendation:</strong> ${escapeAutomationHtml(recommendationLabels[review.recommended_status] || 'No recommendation')}</div>
+                <div><strong>Confidence:</strong> ${review.confidence === null || review.confidence === undefined ? 'N/A' : escapeAutomationHtml(review.confidence) + '%'}</div>
+                <div><strong>Reason:</strong> ${escapeAutomationHtml(review.reason || 'No analysis yet')}</div>`;
+            messages.innerHTML = data.messages.length ? data.messages.map(message => `
+                <article class="automation-message ${escapeAutomationHtml(message.direction)}">
+                    <div class="automation-message-meta">${escapeAutomationHtml(message.direction)} via ${escapeAutomationHtml(message.channel)} · ${escapeAutomationHtml(message.created_at)}</div>
+                    <h4>Original message</h4><pre>${escapeAutomationHtml(message.original_message)}</pre>
+                    ${message.translated_message ? `<h4>English translation</h4><pre>${escapeAutomationHtml(message.translated_message)}</pre>` : ''}
+                    ${message.ai_summary ? `<h4>AI summary</h4><pre>${escapeAutomationHtml(message.ai_summary)}</pre>` : ''}
+                    ${attachmentLinks(message.attachment_url)}
+                </article>`).join('') : '<div class="empty-state">No messages recorded yet.</div>';
+        } catch (error) {
+            summary.innerHTML = `<div>${escapeAutomationHtml(error.message)}</div>`;
+        }
+    }
+
+    function closeAutomationPanel() {
+        document.getElementById('automationModal').hidden = true;
     }
 
     function sendApprovalEmail(orderId, d) {
@@ -1191,8 +1276,9 @@ include 'header.php'; // Using main header for consistency, but admin might need
     }
 
     // ===== ADMIN LOGOUT =====
-    function adminLogout() {
+    async function adminLogout() {
         if (confirm('Are you sure you want to logout?')) {
+            await fetch('auth_admin_logout.php', { method: 'POST' }).catch(() => {});
             localStorage.removeItem('adminLogged');
             localStorage.removeItem('adminEmail');
             window.location.href = 'login.php';
