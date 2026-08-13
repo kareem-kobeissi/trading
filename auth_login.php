@@ -48,6 +48,33 @@ try {
         exit;
     }
 
+    // The administrator uses the normal login form. Credentials stay in the
+    // private server configuration and are never stored in JavaScript.
+    $adminEmail = trim((string) (getenv('ADMIN_EMAIL') ?: ''));
+    $adminPasswordHash = trim((string) (getenv('ADMIN_PASSWORD_HASH') ?: ''));
+    $adminPassword = (string) (getenv('ADMIN_PASSWORD') ?: '');
+    $adminPasswordValid = $adminPasswordHash !== ''
+        ? password_verify($password, $adminPasswordHash)
+        : ($adminPassword !== '' && hash_equals($adminPassword, $password));
+
+    if ($adminEmail !== '' && hash_equals(strtolower($adminEmail), strtolower($email)) && $adminPasswordValid) {
+        session_regenerate_id(true);
+        unset($_SESSION['user_id'], $_SESSION['username'], $_SESSION['email']);
+        $_SESSION['is_admin'] = true;
+        $_SESSION['admin_logged_in'] = true;
+        $_SESSION['admin_email'] = $adminEmail;
+
+        ob_end_clean();
+        http_response_code(200);
+        echo json_encode([
+            'success' => true,
+            'message' => 'Administrator login successful',
+            'is_admin' => true,
+            'email' => $adminEmail
+        ]);
+        exit;
+    }
+
     // Find user by email
     $stmt = $conn->prepare("SELECT id, username, email, password FROM users WHERE email = ?");
     if (!$stmt) {
@@ -81,6 +108,7 @@ try {
     $_SESSION['user_id'] = $user['id'];
     $_SESSION['username'] = $user['username'];
     $_SESSION['email'] = $user['email'];
+    unset($_SESSION['is_admin'], $_SESSION['admin_logged_in'], $_SESSION['admin_email']);
 
     // Send success response
     ob_end_clean();
@@ -88,6 +116,7 @@ try {
     echo json_encode([
         'success' => true,
         'message' => 'Login successful',
+        'is_admin' => false,
         'username' => $user['username'],
         'email' => $user['email']
     ]);

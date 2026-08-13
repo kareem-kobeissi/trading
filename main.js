@@ -542,6 +542,18 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
 
                 if (result.success) {
+                    if (result.is_admin) {
+                        const adminTabId = 'tab_' + Date.now();
+                        localStorage.setItem('adminLogged', 'true');
+                        localStorage.setItem('adminEmail', result.email || email);
+                        localStorage.setItem('adminTabId', adminTabId);
+                        sessionStorage.setItem('myAdminTabId', adminTabId);
+                        sessionStorage.removeItem('userLogged');
+                        sessionStorage.removeItem('currentUsername');
+                        sessionStorage.removeItem('currentEmail');
+                        window.location.href = 'admin_dashboard.php';
+                        return;
+                    }
                     sessionStorage.setItem('userLogged', 'true');
                     sessionStorage.setItem('currentUsername', result.username || '');
                     sessionStorage.setItem('currentEmail', result.email || email);

@@ -1,6 +1,6 @@
 <?php
-// admin_login.php
-include 'header.php';
+header('Location: login.php');
+exit;
 ?>
 
 <div class="form-container admin-form">
