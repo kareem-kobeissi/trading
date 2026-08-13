@@ -10,7 +10,7 @@ from typing import Any
 
 import httpx
 from fastapi import FastAPI, Header, HTTPException, Request
-from openai import OpenAI
+from openai import OpenAI, OpenAIError
 
 app = FastAPI(title="TTR Customer Automation", version="1.0.0")
 
@@ -46,18 +46,22 @@ def fallback_customer_message(order: dict[str, Any]) -> str:
 def generate_customer_message(order: dict[str, Any]) -> str:
     if not env("OPENAI_API_KEY"):
         return fallback_customer_message(order)
-    client = OpenAI(api_key=env("OPENAI_API_KEY"))
-    response = client.responses.create(
-        model=env("OPENAI_MODEL", "gpt-5-mini"),
-        instructions=(
-            "Write a concise, professional payment follow-up message for THE TRADING "
-            "ROUTINE. Use the customer's apparent language when confidently inferable; "
-            "otherwise use English. State that approval is manual. Never claim payment "
-            "was received or verified. Ask for the transaction reference and proof."
-        ),
-        input=json.dumps(order, ensure_ascii=False),
-    )
-    return response.output_text.strip() or fallback_customer_message(order)
+    try:
+        client = OpenAI(api_key=env("OPENAI_API_KEY"))
+        response = client.responses.create(
+            model=env("OPENAI_MODEL", "gpt-5-mini"),
+            instructions=(
+                "Write a concise, professional payment follow-up message for THE TRADING "
+                "ROUTINE. Use the customer's apparent language when confidently inferable; "
+                "otherwise use English. State that approval is manual. Never claim payment "
+                "was received or verified. Ask for the transaction reference and proof."
+            ),
+            input=json.dumps(order, ensure_ascii=False),
+        )
+        return response.output_text.strip() or fallback_customer_message(order)
+    except OpenAIError as error:
+        print(f"OpenAI unavailable; using fallback message ({type(error).__name__}).")
+        return fallback_customer_message(order)
 
 
 def send_email(to_email: str, subject: str, plain_message: str) -> str:
@@ -125,8 +129,10 @@ async def pending_order(
         customer_message,
     )
 
-    post_callback(
-        {
+    callback_saved = True
+    try:
+        post_callback(
+            {
             "event": "message.sent",
             "order_id": order["id"],
             "message": {
@@ -141,8 +147,11 @@ async def pending_order(
                 "recommended_status": "pending",
                 "reason": "Payment instructions sent; waiting for customer proof.",
             },
-        }
-    )
+            }
+        )
+    except (httpx.HTTPError, OSError) as error:
+        callback_saved = False
+        print(f"Callback unavailable; email was still sent ({type(error).__name__}).")
 
     owner_email = env("OWNER_EMAIL")
     if owner_email:
@@ -155,6 +164,13 @@ async def pending_order(
             "The customer was contacted automatically by email. WhatsApp automation "
             "will remain disabled until an official Business API number is connected."
         )
-        send_email(owner_email, f"New pending order {order['reference']}", owner_message)
+        try:
+            send_email(owner_email, f"New pending order {order['reference']}", owner_message)
+        except (smtplib.SMTPException, OSError) as error:
+            print(f"Owner notification failed ({type(error).__name__}).")
 
-    return {"accepted": True, "event_id": event.get("event_id")}
+    return {
+        "accepted": True,
+        "event_id": event.get("event_id"),
+        "callback_saved": callback_saved,
+    }

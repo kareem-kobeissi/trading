@@ -4,13 +4,31 @@ include 'header.php';
 require_once 'config.php';
 
 // Get course information
-$course_price = 300; // Updated price from 0 to 300
+$course_price = 0;
 $course_id = 'basics'; // Default course section
 
-// Check if user is logged in and has purchased the course
-$has_access = false;
+// Check if user is logged in and has unlocked access to course
 $user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : null;
 $user_name = isset($_SESSION['username']) ? $_SESSION['username'] : null;
+
+$has_access = false;
+$course_access_status = 'none';
+if ($user_id) {
+    $accStmt = $conn->prepare("SELECT oi.item_status, o.status FROM orders o JOIN order_items oi ON o.id = oi.order_id WHERE o.user_id = ? AND oi.product_type = 'course' ORDER BY FIELD(oi.item_status, 'unlocked', 'pending', 'cancelled') LIMIT 1");
+    if ($accStmt) {
+        $accStmt->bind_param('i', $user_id);
+        $accStmt->execute();
+        $accRes = $accStmt->get_result();
+        if ($accRes && $accRes->num_rows > 0) {
+            $accRow = $accRes->fetch_assoc();
+            $course_access_status = $accRow['item_status'] ?: $accRow['status'];
+            if ($course_access_status === 'unlocked') {
+                $has_access = true;
+            }
+        }
+        $accStmt->close();
+    }
+}
 
 // Access control: Check localStorage orders from JavaScript
 // This is handled on client-side since we're using localStorage/JSON
@@ -81,9 +99,28 @@ $totalLessonCount = $foundationLessonCount + $advancedLessonCount + $riskLessonC
 
 <!-- ===== COURSES HEADER SECTION ===== -->
 <section class="about-header-section courses-header">
-    <div class="about-header-content">
-        <h1 class="about-main-title">Trading Mastery Course</h1>
-        <p class="about-subtitle">From beginner foundations to advanced market mastery</p>
+    <div class="premium-page-hero">
+        <div class="about-header-content premium-hero-copy">
+            <span class="premium-hero-kicker">Learn • Practice • Master</span>
+            <h1 class="about-main-title">Trading Mastery Course</h1>
+            <p class="about-subtitle">From beginner foundations to advanced market mastery</p>
+        </div>
+        <div class="premium-hero-visual courses-visual-wrapper tilt-visual" aria-hidden="true" id="coursesTiltVisual">
+            <div class="tilt-glow"></div>
+            <div class="action-emitter">
+                <img src="course-journey.webp" alt="" class="premium-hero-image courses-hero-image" decoding="async" fetchpriority="high" id="coursesHeroImg">
+
+            </div>
+            <!-- Floating learning chips -->
+            <div class="belief-chip chip-a courses-chip-a" style="top:8%;right:-5%;--cdur:6s;--cdelay:0s"><span class="icon-3d"><i class="fas fa-coins"></i></span> Forex</div>
+            <div class="belief-chip chip-b courses-chip-b" style="top:28%;left:-8%;--cdur:6.5s;--cdelay:1.5s"><span class="icon-3d"><i class="fas fa-chart-bar"></i></span> Stocks</div>
+            <div class="belief-chip chip-c courses-chip-c" style="bottom:26%;right:-6%;--cdur:5.5s;--cdelay:3s"><span class="icon-3d"><i class="fas fa-shield-halved"></i></span> Risk Ratio</div>
+            <div class="belief-chip chip-d courses-chip-d" style="bottom:10%;left:-5%;--cdur:7s;--cdelay:0.8s"><span class="icon-3d"><i class="fas fa-chess-knight"></i></span> Strategies</div>
+            <!-- Live badge -->
+            <div class="img-badge" style="bottom:-14px;left:50%;transform:translateX(-50%);--bpdelay:.4s">
+                <span class="badge-dot"></span> Lifetime Access
+            </div>
+        </div>
     </div>
 </section>
 
@@ -95,7 +132,17 @@ $totalLessonCount = $foundationLessonCount + $advancedLessonCount + $riskLessonC
         <div class="course-info-card">
             <div class="course-header">
                 <h2>Complete Trading Mastery Program</h2>
-                <div class="course-price">$300</div>
+                <div class="course-price" id="courseBadgeStatus" style="font-weight: 800; font-size: 0.95rem; text-transform: uppercase;">
+                    <?php
+                    if ($course_access_status === 'unlocked') {
+                        echo '<span style="color: #00ff88;"><i class="fas fa-check-circle"></i> APPROVED</span>';
+                    } elseif ($course_access_status === 'pending') {
+                        echo '<span style="color: #f59d00;"><i class="fas fa-clock"></i> PENDING</span>';
+                    } else {
+                        echo '<span>FREE</span>';
+                    }
+                    ?>
+                </div>
             </div>
 
             <div class="course-details">
@@ -109,11 +156,13 @@ $totalLessonCount = $foundationLessonCount + $advancedLessonCount + $riskLessonC
 
             <div id="courseActionArea">
                 <?php if (!$user_id): ?>
-                    <a href="login.php?redirect=courses.php" class="btn-buy-course">Login to Purchase</a>
-                <?php elseif ($has_access): ?>
-                    <div class="access-granted">✓ Course Unlocked - You have full access</div>
+                    <a href="login.php?redirect=courses.php" class="btn-buy-course">Login to Enroll</a>
+                <?php elseif ($course_access_status === 'unlocked'): ?>
+                    <div class="access-granted" style="color:#00ff88;font-weight:bold;padding:.8rem 1.2rem;background:rgba(0,255,136,0.1);border:1px solid rgba(0,255,136,0.3);border-radius:10px;display:inline-block;">✓ Access Approved — Course Unlocked</div>
+                <?php elseif ($course_access_status === 'pending'): ?>
+                    <button type="button" class="btn-buy-course" disabled style="opacity:.7;cursor:not-allowed;background:#333;color:#f59d00;border:1px solid #f59d00;"><i class="fas fa-clock" aria-hidden="true"></i> Pending Admin Approval</button>
                 <?php else: ?>
-                    <button type="button" class="btn-buy-course" onclick="addCourseToCart()">Enroll Now</button>
+                    <button type="button" class="btn-buy-course" onclick="requestCourseAccess()">Enroll / Request Access</button>
                 <?php endif; ?>
             </div>
         </div>
@@ -142,7 +191,7 @@ $totalLessonCount = $foundationLessonCount + $advancedLessonCount + $riskLessonC
                 </button>
                 <div id="pdfLockOverlay" class="pdf-lock-overlay">
                     <div class="pdf-lock-content">
-                        <p class="pdf-lock-text">Purchase course to download</p>
+                        <p class="pdf-lock-text">Login to access course resources</p>
                     </div>
                 </div>
                 <div id="pdfMenu" class="pdf-menu" style="display: none;">
@@ -201,7 +250,7 @@ $totalLessonCount = $foundationLessonCount + $advancedLessonCount + $riskLessonC
                     <br><br>
                     Private sessions can be arranged based on your location and learning needs, with personalized support designed to accelerate your understanding of the markets.
                     <br><br>
-                    Available by appointment and offered at a separate premium rate.
+                    Available by appointment for registered members.
                 </div>
                 <a href="https://wa.me/96171493997?text=Hello%2C%20I%20would%20like%20to%20request%20a%20private%20trading%20session.%20Please%20send%20me%20the%20available%20dates%2C%20details%2C%20and%20price."
                     target="_blank" rel="noopener noreferrer" class="private-session-btn">Request Private Session</a>
@@ -1881,7 +1930,7 @@ $totalLessonCount = $foundationLessonCount + $advancedLessonCount + $riskLessonC
 
 <script>
     // Course price and ID for cart operations
-    const coursePrice = 300; // Updated from 0 to 300
+    const coursePrice = 0;
     const courseId = '<?php echo $course_id; ?>';
     const userId = '<?php echo isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 'null'; ?>';
 
@@ -2172,55 +2221,58 @@ $totalLessonCount = $foundationLessonCount + $advancedLessonCount + $riskLessonC
     const currentUsername = sessionStorage.getItem('currentUsername');
     const currentEmail = sessionStorage.getItem('currentEmail');
 
-    // Check if user has unlocked access to current course
+    // Check if user has unlocked access to current course from DB
     async function checkCourseAccess(courseId) {
-        const sessionEmail = sessionStorage.getItem('currentEmail');
-        if (!sessionEmail) return false;
+        if (!userId || userId === 'null') return false;
         try {
-            const formData = new FormData();
-            formData.append('email', sessionEmail);
-            const response = await fetch('check_access.php?refresh=' + Date.now(), {
-                method: 'POST',
-                body: formData,
-                cache: 'no-store'
-            });
-            const data = await response.json();
-            return data.has_access === true;
-        } catch (err) {
-            console.error('Access check failed:', err);
+            const res = await fetch('check_access.php?product=course', { cache: 'no-store' });
+            const data = await res.json();
+            return data.status === 'unlocked';
+        } catch(e) {
             return false;
         }
     }
     async function checkUserHasOrder() {
-        const sessionEmail = sessionStorage.getItem('currentEmail');
-        if (!sessionEmail) return null;
+        if (!userId || userId === 'null') return null;
         try {
-            const formData = new FormData();
-            formData.append('email', sessionEmail);
-            const response = await fetch('get_user_orders.php?refresh=' + Date.now(), {
-                method: 'POST',
-                body: formData,
-                cache: 'no-store'
-            });
-            const data = await response.json();
-            if (data.success && data.orders && data.orders.length > 0) {
-                // Only look at course-type items
-                const courseOrders = data.orders.filter(o => o.product_type === 'course');
-                if (courseOrders.length === 0) return null;
-                // Prefer an active (non-cancelled) item first
-                const activeOrder = courseOrders.find(o => o.status !== 'cancelled');
-                return activeOrder ? activeOrder.status : null;
-            }
-            return null;
-        } catch (err) {
-            console.error('checkUserHasOrder failed:', err);
+            const res = await fetch('check_access.php?product=course', { cache: 'no-store' });
+            const data = await res.json();
+            return data.status;
+        } catch(e) {
             return null;
         }
     }
+
+    async function requestCourseAccess() {
+        if (!userId || userId === 'null') {
+            window.location.href = 'login.php?redirect=courses.php';
+            return;
+        }
+        const actionArea = document.getElementById('courseActionArea');
+        if (actionArea) {
+            actionArea.innerHTML = '<button type="button" class="btn-buy-course" disabled style="opacity:.6;cursor:not-allowed;background:#444;"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Submitting Request...</button>';
+        }
+        try {
+            const res = await fetch('record_free_access.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'product=course',
+                cache: 'no-store'
+            });
+            const data = await res.json();
+            updateCartButtonState();
+            updateAccessStatus();
+        } catch(e) {
+            console.error('Request failed:', e);
+            if (actionArea) {
+                actionArea.innerHTML = '<button type="button" class="btn-buy-course" onclick="requestCourseAccess()">Enroll / Request Access</button>';
+            }
+        }
+    }
+
     // Update access status when section changes
     async function updateAccessStatus() {
-        const currentEmail = sessionStorage.getItem('currentEmail');
-        const isLoggedIn = !!currentEmail;
+        const isLoggedIn = !!userId && userId !== 'null';
         hasAccess = await checkCourseAccess(currentSection);
         const overlay = document.querySelector('.video-locked-overlay');
         if (overlay) {
@@ -2286,30 +2338,28 @@ $totalLessonCount = $foundationLessonCount + $advancedLessonCount + $riskLessonC
 
     async function updateCartButtonState() {
         const actionArea = document.getElementById('courseActionArea');
+        const badgeStatus = document.getElementById('courseBadgeStatus');
         if (!actionArea) return;
 
-        const currentUsername = sessionStorage.getItem('currentUsername');
-        const currentEmail = sessionStorage.getItem('currentEmail');
-        const isLoggedIn = currentUsername || currentEmail;
+        const isLoggedIn = !!userId && userId !== 'null';
 
         if (!isLoggedIn) {
-            actionArea.innerHTML = '<a href="login.php?redirect=courses.php" class="btn-buy-course">Login to Purchase</a>';
+            actionArea.innerHTML = '<a href="login.php?redirect=courses.php" class="btn-buy-course">Login to Enroll</a>';
+            if (badgeStatus) badgeStatus.innerHTML = '<span>FREE</span>';
             return;
         }
 
         const orderStatus = await checkUserHasOrder();
 
         if (orderStatus === 'unlocked') {
-            actionArea.innerHTML = '<div class="access-granted">✓ Course Unlocked - You have full access</div>';
+            actionArea.innerHTML = '<div class="access-granted" style="color:#00ff88;font-weight:bold;padding:.8rem 1.2rem;background:rgba(0,255,136,0.1);border:1px solid rgba(0,255,136,0.3);border-radius:10px;display:inline-block;">✓ Access Approved — Course Unlocked</div>';
+            if (badgeStatus) badgeStatus.innerHTML = '<span style="color: #00ff88;"><i class="fas fa-check-circle"></i> APPROVED</span>';
         } else if (orderStatus === 'pending') {
-            actionArea.innerHTML = '<button type="button" class="btn-buy-course" disabled style="opacity:.5;cursor:not-allowed;">⏳ Pending Manager Approval</button>';
+            actionArea.innerHTML = '<button type="button" class="btn-buy-course" disabled style="opacity:.7;cursor:not-allowed;background:#333;color:#f59d00;border:1px solid #f59d00;"><i class="fas fa-clock" aria-hidden="true"></i> Pending Admin Approval</button>';
+            if (badgeStatus) badgeStatus.innerHTML = '<span style="color: #f59d00;"><i class="fas fa-clock"></i> PENDING</span>';
         } else {
-            globalCart.load();
-            if (globalCart.items.some(item => item.courseId === 'complete-mastery')) {
-                actionArea.innerHTML = '<button type="button" class="btn-buy-course" disabled style="opacity:.72;cursor:not-allowed;">Already in Cart</button>';
-            } else {
-                actionArea.innerHTML = '<button type="button" class="btn-buy-course" onclick="addCourseToCart()">Enroll Now</button>';
-            }
+            actionArea.innerHTML = '<button type="button" class="btn-buy-course" onclick="requestCourseAccess()">Enroll / Request Access</button>';
+            if (badgeStatus) badgeStatus.innerHTML = '<span>FREE</span>';
         }
     }
 
@@ -2431,10 +2481,7 @@ $totalLessonCount = $foundationLessonCount + $advancedLessonCount + $riskLessonC
         // Get logged in user info
         const currentUsername = sessionStorage.getItem('currentUsername');
         const currentEmail = sessionStorage.getItem('currentEmail');
-        const isLoggedIn = currentUsername || currentEmail;
-
-        // Check initial access status
-        // Check initial access status FROM DATABASE
+        // Check initial access status FROM DATABASE (requires admin approval)
         hasAccess = await checkCourseAccess(currentSection);
         console.log('DOMContentLoaded - Initial hasAccess from DB:', hasAccess);
 
@@ -2518,6 +2565,27 @@ $totalLessonCount = $foundationLessonCount + $advancedLessonCount + $riskLessonC
     document.addEventListener('beforeunload', function() {
         // Before page reload, save current state if needed
     });
+</script>
+
+<script>
+(function() {
+    var wrap = document.getElementById('coursesTiltVisual');
+    var img  = document.getElementById('coursesHeroImg');
+    if (!wrap || !img) return;
+    var raf;
+    wrap.addEventListener('mousemove', function(e) {
+        cancelAnimationFrame(raf);
+        raf = requestAnimationFrame(function() {
+            var r = wrap.getBoundingClientRect();
+            var x = (e.clientX - r.left) / r.width  - 0.5;
+            var y = (e.clientY - r.top)  / r.height - 0.5;
+            img.style.transform = 'perspective(700px) rotateX(' + (y * -12) + 'deg) rotateY(' + (x * 12) + 'deg) scale(1.04)';
+        });
+    });
+    wrap.addEventListener('mouseleave', function() {
+        img.style.transform = '';
+    });
+})();
 </script>
 
 <?php include 'footer.php'; ?>

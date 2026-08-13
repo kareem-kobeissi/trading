@@ -72,15 +72,18 @@ $body = "
 ";
 
 // SMTP send
-$smtpHost = 'smtp.gmail.com';
-$smtpPort = 587;
-$smtpUsername = 'thetradingroutine@gmail.com';
-$smtpPassword = 'sbkm xzof swvo lrlc';
-$senderEmail = 'thetradingroutine@gmail.com';
-$senderName = 'The Trading Routine';
+$smtpHost = getenv('SMTP_HOST') ?: 'smtp.hostinger.com';
+$smtpPort = (int) (getenv('SMTP_PORT') ?: 587);
+$smtpUsername = getenv('SMTP_USERNAME') ?: '';
+$smtpPassword = getenv('SMTP_PASSWORD') ?: '';
+$senderEmail = getenv('SMTP_FROM_EMAIL') ?: $smtpUsername;
+$senderName = getenv('SMTP_FROM_NAME') ?: 'The Trading Routine';
 $subject = 'Reset Your Password - The Trading Routine';
 
 try {
+    if ($smtpUsername === '' || $smtpPassword === '') {
+        throw new Exception('SMTP is not configured');
+    }
     $socket = @fsockopen($smtpHost, $smtpPort, $errno, $errstr, 20);
     if (!$socket) throw new Exception("Could not connect: $errstr");
     stream_set_timeout($socket, 10);

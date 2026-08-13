@@ -1,5 +1,5 @@
 <?php
-// indicators.php - Indicators Coming Soon Page
+// indicators.php - TradingView indicator page
 include 'header.php';
 ?>
 
@@ -37,8 +37,10 @@ include 'header.php';
         animation: fadeInUp 0.8s ease-out;
     }
 
-    .coming-soon-badge {
-        display: inline-block;
+    .indicator-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
         padding: 0.6rem 1.5rem;
         background: rgba(0, 212, 255, 0.1);
         border: 1px solid var(--primary-color);
@@ -70,7 +72,7 @@ include 'header.php';
         line-height: 1.6;
     }
 
-    .working-box {
+    .indicator-product-card {
         background: linear-gradient(135deg, rgba(26, 31, 58, 0.95), rgba(10, 14, 39, 1));
         border: 2px solid rgba(0, 212, 255, 0.2);
         border-radius: 20px;
@@ -80,47 +82,75 @@ include 'header.php';
         backdrop-filter: blur(10px);
     }
 
-    .gear-icon {
-        font-size: 3rem;
-        color: var(--primary-color);
-        margin-bottom: 1.5rem;
-        animation: rotateGear 4s linear infinite;
-        display: inline-block;
+    .indicator-preview-image {
+        display: block;
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        margin: 0 auto 2rem;
+        object-fit: cover;
+        border: 1px solid rgba(0, 212, 255, 0.25);
+        border-radius: 16px;
+        box-shadow: 0 18px 45px rgba(0, 0, 0, 0.42), 0 0 24px rgba(0, 212, 255, 0.08);
     }
 
-    @keyframes rotateGear {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
+    .indicator-actions {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-top: 2.25rem;
+    }
+
+    .indicator-actions .btn {
+        min-width: 220px;
+        padding: 1rem 1.5rem;
+        border-radius: 13px;
+    }
+
+    .indicator-whatsapp-btn {
+        color: #fff !important;
+        background: linear-gradient(135deg, #25d366, #128c4a) !important;
+        box-shadow: 0 10px 28px rgba(37, 211, 102, 0.25) !important;
+    }
+
+    .indicator-whatsapp-btn:hover {
+        box-shadow: 0 15px 36px rgba(37, 211, 102, 0.38) !important;
     }
 
     @media (max-width: 768px) {
         .indicators-title { font-size: 2.5rem; }
         .indicators-subtitle { font-size: 1.1rem; }
         .indicators-hero { padding: 4rem 3%; }
+        .indicator-product-card { padding: 2rem 1rem; }
+        .indicator-actions { display: grid; }
+        .indicator-actions .btn { width: 100%; min-width: 0; }
     }
 </style>
 
 <section class="indicators-hero">
     <div class="indicators-content">
-        <div class="coming-soon-badge">Coming Soon</div>
+        <div class="indicator-badge"><i class="fas fa-chart-line"></i> TradingView Indicator</div>
         
-        <h1 class="indicators-title">Professional Trading Indicators</h1>
+        <h1 class="indicators-title">The Holly Grail</h1>
         
-        <p class="indicators-subtitle">
-            We are currently finalizing our proprietary technical indicators designed for institutional-level precision. 
-            Soon, you'll be able to access the exact tools we use to identify high-probability setups.
-        </p>
 
-        <div class="working-box">
-            <div class="gear-icon">⚙️</div>
-            <h3 style="color: #fff; margin-bottom: 1rem; font-size: 1.8rem;">Currently Under Development</h3>
+
+        <div class="indicator-product-card">
+            <img src="holly-grail-preview.jpeg" alt="The Holly Grail indicator displayed on a TradingView gold chart" class="indicator-preview-image" loading="lazy">
+            <h2 style="margin-bottom: 1rem;">Discover The Holly Grail Indicator</h2>
             <p style="color: var(--text-muted); line-height: 1.6;">
-                Our engineering team is fine-tuning the algorithms to ensure 100% accuracy and performance. 
-                Keep an eye on this space—something revolutionary is on its way.
+                Read the complete description and understand how the indicator works directly on TradingView. No payment or admin approval is required.
             </p>
-            <div style="margin-top: 2.5rem;">
-                <a href="index.php" class="btn btn-primary" style="padding: 1rem 2.5rem; font-size: 1rem;">Back to Home</a>
-                <a href="ea.php" class="btn btn-secondary" style="padding: 1rem 2.5rem; font-size: 1rem; margin-left: 1rem;">Explore EAs</a>
+            <div class="indicator-actions">
+                <?php if (isset($_SESSION['user_id'])): ?>
+                    <a href="record_free_access.php?product=indicator" target="_blank" rel="noopener noreferrer" class="btn btn-primary">
+                        <i class="fas fa-external-link-alt"></i> Open Free Indicator
+                    </a>
+                <?php else: ?>
+                    <a href="login.php?redirect=indicators.php" class="btn btn-primary">
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </a>
+                <?php endif; ?>
             </div>
         </div>
     </div>

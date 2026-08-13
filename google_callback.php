@@ -72,9 +72,13 @@ if ($result && $result->num_rows > 0) {
     $username = $user['username'];
 } else {
     $username = $conn->real_escape_string(explode('@', $googleUser['email'])[0]);
-    $password = password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT);
+    $password = password_hash(bin2hex(random_bytes(32)), PASSWORD_DEFAULT);
     $conn->query("INSERT INTO users (username, email, password, created_at) VALUES ('$username', '$email', '$password', NOW())");
     $userId = $conn->insert_id;
+
+    // Send registration notification to support@thetradingroutine.com
+    require_once __DIR__ . '/notify_admin.php';
+    notifySupportNewRegistration($username, $email, 'Google OAuth');
 }
 
 $conn->close();

@@ -85,8 +85,12 @@ try {
         try {
             require_once 'api/mail-config.php';
 
-            // Remove spaces from password if any
-            $cleanPassword = str_replace(' ', '', GMAIL_PASSWORD);
+            $smtpPassword = GMAIL_PASSWORD;
+            $smtpCaFile = getenv('SMTP_CA_FILE') ?: '';
+            $smtpVerifyTlsValue = strtolower(trim((string) (getenv('SMTP_VERIFY_TLS') ?: 'true')));
+            $smtpVerifyTls = !in_array($smtpVerifyTlsValue, ['0', 'false', 'no', 'off'], true);
+            $smtpDebugValue = strtolower(trim((string) (getenv('SMTP_DEBUG') ?: 'false')));
+            $smtpDebug = in_array($smtpDebugValue, ['1', 'true', 'yes', 'on'], true);
 
             $subject = "Your Verification Code - The Trading Routine";
             $htmlMessage = "
@@ -130,13 +134,13 @@ try {
                 // Send via Gmail SMTP
                 if (file_exists('libs/GmailSMTP.php')) {
                     require_once 'libs/GmailSMTP.php';
-                    $smtp = new GmailSMTP(GMAIL_ADDRESS, $cleanPassword);
+                    $smtp = new GmailSMTP(GMAIL_ADDRESS, $smtpPassword, $smtpDebug, SMTP_HOST, SMTP_PORT, $smtpCaFile, $smtpVerifyTls);
                     $emailSent = $smtp->sendEmail($email, $subject, $htmlMessage);
                 }
             }
 
             // Fallback to PHP mail() if SMTP fails or is not configured
-            if (!$emailSent) {
+            if (!$emailSent && GMAIL_ADDRESS !== '') {
                 $headers = "From: " . GMAIL_ADDRESS . "\r\n";
                 $headers .= "MIME-Version: 1.0\r\n";
                 $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
@@ -177,17 +181,10 @@ try {
     // ===== ACTION: VERIFY AND CREATE =====
     if ($action === 'verify_and_create') {
         $username = isset($_POST['username']) ? trim($_POST['username']) : '';
-        $email = isset($_POST['email']) ? trim($_POST['email']) : '';
+        $email    = isset($_POST['email']) ? trim($_POST['email']) : '';
+        $phone    = isset($_POST['phone']) ? trim($_POST['phone']) : '';
         $password = isset($_POST['password']) ? $_POST['password'] : '';
-        $code = isset($_POST['code']) ? trim($_POST['code']) : '';
-
-        // Log what we received for debugging
-        error_log("=== VERIFY AND CREATE DEBUG ===");
-        error_log("Username: [" . $username . "]");
-        error_log("Email: [" . $email . "]");
-        error_log("Password length: " . strlen($password));
-        error_log("Code: [" . $code . "]");
-        error_log("POST data: " . json_encode($_POST));
+        $code     = isset($_POST['code']) ? trim($_POST['code']) : '';
 
         // Validate inputs - provide specific error for each field
         if (empty($username)) {
@@ -305,13 +302,17 @@ try {
         $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
 
         // Create user account
-        $stmt = $conn->prepare("INSERT INTO users (username, email, password, created_at) VALUES (?, ?, ?, NOW())");
+        $stmt = $conn->prepare("INSERT INTO users (username, email, phone, password, created_at) VALUES (?, ?, ?, ?, NOW())");
         if (!$stmt) {
             throw new Exception("Prepare failed: " . $conn->error);
         }
-        $stmt->bind_param("sss", $username, $email, $hashedPassword);
+        $stmt->bind_param("ssss", $username, $email, $phone, $hashedPassword);
         $stmt->execute();
         $stmt->close();
+
+        // Send registration alert email to support@thetradingroutine.com
+        require_once __DIR__ . '/notify_admin.php';
+        $adminNotificationSent = notifySupportNewRegistration($username, $email, !empty($phone) ? $phone : 'N/A');
 
         // Delete verification code after success
         $stmt = $conn->prepare("DELETE FROM verification_codes WHERE email = ? AND code = ?");
@@ -328,14 +329,16 @@ try {
             'success' => true,
             'message' => 'Account created successfully',
             'username' => $username,
-            'email' => $email
+            'email' => $email,
+            'admin_notification_sent' => $adminNotificationSent
         ]);
         exit;
     }
 
     // ===== LEGACY ACTION (backward compatibility) =====
     $username = isset($_POST['username']) ? trim($_POST['username']) : '';
-    $email = isset($_POST['email']) ? trim($_POST['email']) : '';
+    $email    = isset($_POST['email']) ? trim($_POST['email']) : '';
+    $phone    = isset($_POST['phone']) ? trim($_POST['phone']) : '';
     $password = isset($_POST['password']) ? $_POST['password'] : '';
 
     if (empty($username) || empty($email) || empty($password)) {
@@ -396,13 +399,17 @@ try {
     // Hash password and create user
     $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
 
-    $stmt = $conn->prepare("INSERT INTO users (username, email, password, created_at) VALUES (?, ?, ?, NOW())");
+    $stmt = $conn->prepare("INSERT INTO users (username, email, phone, password, created_at) VALUES (?, ?, ?, ?, NOW())");
     if (!$stmt) {
         throw new Exception("Prepare failed: " . $conn->error);
     }
-    $stmt->bind_param("sss", $username, $email, $hashedPassword);
+    $stmt->bind_param("ssss", $username, $email, $phone, $hashedPassword);
     $stmt->execute();
     $stmt->close();
+
+    // Send registration alert email to support@thetradingroutine.com
+    require_once __DIR__ . '/notify_admin.php';
+    $adminNotificationSent = notifySupportNewRegistration($username, $email, !empty($phone) ? $phone : 'N/A');
 
     ob_end_clean();
     http_response_code(200);
@@ -410,7 +417,8 @@ try {
         'success' => true,
         'message' => 'Account created successfully',
         'username' => $username,
-        'email' => $email
+        'email' => $email,
+        'admin_notification_sent' => $adminNotificationSent
     ]);
 } catch (Exception $e) {
     ob_end_clean();
