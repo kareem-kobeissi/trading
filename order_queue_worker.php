@@ -30,6 +30,10 @@ $events = $conn->query(
      LIMIT 20"
 );
 
+if (!$events || $events->num_rows === 0) {
+    echo '[' . date('Y-m-d H:i:s') . "] No eligible queued automation events.\n";
+}
+
 while ($event = $events->fetch_assoc()) {
     $eventId = (int) $event['id'];
     $conn->query("UPDATE automation_events SET delivery_status = 'processing', attempts = attempts + 1 WHERE id = $eventId");
