@@ -164,9 +164,18 @@ try {
                 $emailSent = @mail($email, $subject, $htmlMessage, $headers);
             }
         } catch (Throwable $e) {
-            // Log error but don't expose it
+            // Log the SMTP error and use the hosting provider's native mail
+            // transport as a production fallback.
             error_log("Email sending error: " . $e->getMessage());
-            $emailSent = false;
+            if (isset($subject, $htmlMessage) && defined('GMAIL_ADDRESS') && GMAIL_ADDRESS !== '') {
+                $fallbackHeaders = "From: " . GMAIL_ADDRESS . "\r\n";
+                $fallbackHeaders .= "Reply-To: " . GMAIL_ADDRESS . "\r\n";
+                $fallbackHeaders .= "MIME-Version: 1.0\r\n";
+                $fallbackHeaders .= "Content-Type: text/html; charset=UTF-8\r\n";
+                $emailSent = @mail($email, $subject, $htmlMessage, $fallbackHeaders);
+            } else {
+                $emailSent = false;
+            }
         }
 
         if (!$emailSent) {
