@@ -1141,7 +1141,6 @@ include 'header.php';
             summary.innerHTML = `
                 <div><strong>Contact:</strong> ${escapeAutomationHtml(review.contact_status || 'not contacted')}</div>
                 <div><strong>AI recommendation:</strong> ${escapeAutomationHtml(recommendationLabels[review.recommended_status] || 'No recommendation')}</div>
-                <div><strong>Confidence:</strong> ${review.confidence === null || review.confidence === undefined ? 'N/A' : escapeAutomationHtml(review.confidence) + '%'}</div>
                 <div><strong>Reason:</strong> ${escapeAutomationHtml(review.reason || 'No analysis yet')}</div>`;
             messages.innerHTML = data.messages.length ? data.messages.map(message => `
                 <article class="automation-message ${escapeAutomationHtml(message.direction)}">
