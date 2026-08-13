@@ -21,14 +21,14 @@ register_shutdown_function(function () {
         'diagnostic' => basename($error['file']) . ':' . $error['line']
     ]);
 });
-
+  
 // Disable error display
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 
 // Get config
 try {
-    require_once 'config.php';
+    require_once __DIR__ . '/config.php';
 } catch (Throwable $e) {
     ob_end_clean();
     http_response_code(500);
@@ -101,7 +101,7 @@ try {
         $emailSent = false;
         $deliveryDiagnostic = 'unknown';
         try {
-            require_once 'api/mail-config.php';
+            require_once __DIR__ . '/api/mail-config.php';
 
             $smtpPassword = GMAIL_PASSWORD;
             $smtpCaFile = getenv('SMTP_CA_FILE') ?: '';
@@ -150,8 +150,8 @@ try {
 
             if (defined('USE_GMAIL_SMTP') && USE_GMAIL_SMTP) {
                 // Send via Gmail SMTP
-                if (file_exists('libs/GmailSMTP.php')) {
-                    require_once 'libs/GmailSMTP.php';
+                if (file_exists(__DIR__ . '/libs/GmailSMTP.php')) {
+                    require_once __DIR__ . '/libs/GmailSMTP.php';
                     $smtp = new GmailSMTP(GMAIL_ADDRESS, $smtpPassword, $smtpDebug, SMTP_HOST, SMTP_PORT, $smtpCaFile, $smtpVerifyTls);
                     $emailSent = $smtp->sendEmail($email, $subject, $htmlMessage);
                     $deliveryDiagnostic = $emailSent ? 'smtp_accepted' : 'smtp_rejected';
