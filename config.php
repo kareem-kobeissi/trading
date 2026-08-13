@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/runtime_secrets.php';
+
 // Database Configuration
 define('DB_HOST', 'localhost');
 define('DB_USER', 'root');
