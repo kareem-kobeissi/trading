@@ -886,9 +886,7 @@ include 'header.php';
     <div class="automation-modal-card" role="dialog" aria-modal="true" aria-labelledby="automationModalTitle">
         <button type="button" class="automation-close" onclick="closeAutomationPanel()" aria-label="Close">&times;</button>
         <h2 id="automationModalTitle">Customer Conversation Review</h2>
-        <div id="automationReviewSummary" class="automation-review-summary"></div>
         <div id="automationMessages" class="automation-messages"></div>
-        <p class="automation-advisory">AI recommendations are advisory. Approve or reject using the order controls after reviewing the evidence.</p>
     </div>
 </div>
 
@@ -898,9 +896,6 @@ include 'header.php';
     .automation-modal-card { position: relative; width: min(860px, 100%); margin: auto; padding: 1.5rem; border: 1px solid rgba(0,212,255,.28); border-radius: 18px; background: #0d1730; box-shadow: 0 24px 80px rgba(0,0,0,.55); }
     .automation-modal-card h2 { margin: 0 2.5rem 1rem 0; color: var(--primary-color); }
     .automation-close { position: absolute; right: 1rem; top: .8rem; border: 0; background: transparent; color: #fff; font-size: 2rem; cursor: pointer; }
-    .automation-review-summary { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: .75rem; margin-bottom: 1rem; padding: 1rem; border-radius: 12px; background: rgba(0,212,255,.06); }
-    .automation-review-summary div { color: #dbeafe; }
-    .automation-review-summary strong { color: #78e8ff; }
     .automation-messages { display: grid; gap: .9rem; }
     .automation-message { padding: 1rem; border: 1px solid rgba(255,255,255,.1); border-radius: 12px; background: rgba(255,255,255,.035); }
     .automation-message.incoming { border-color: rgba(245,157,0,.35); }
@@ -909,7 +904,6 @@ include 'header.php';
     .automation-message pre { margin: 0; color: #eef4ff; white-space: pre-wrap; word-break: break-word; font: inherit; line-height: 1.55; }
     .automation-proof-links { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .75rem; }
     .automation-proof-links a { padding: .45rem .7rem; border-radius: 8px; background: rgba(0,212,255,.12); color: #78e8ff; text-decoration: none; }
-    .automation-advisory { margin: 1rem 0 0; color: #f7c66b; font-size: .85rem; }
     @media (max-width: 600px) { .automation-review-summary { grid-template-columns: 1fr; } .automation-modal-card { padding: 1rem; } }
 </style>
 
@@ -1124,24 +1118,13 @@ include 'header.php';
 
     async function openAutomationPanel(orderId) {
         const modal = document.getElementById('automationModal');
-        const summary = document.getElementById('automationReviewSummary');
         const messages = document.getElementById('automationMessages');
         modal.hidden = false;
-        summary.innerHTML = '<div>Loading review...</div>';
-        messages.innerHTML = '';
+        messages.innerHTML = '<div>Loading conversation...</div>';
         try {
             const response = await fetch(`get_order_automation.php?order_id=${encodeURIComponent(orderId)}`, { cache: 'no-store' });
             const data = await response.json();
             if (!response.ok || !data.success) throw new Error(data.message || 'Unable to load conversation');
-            const review = data.review || {};
-            const recommendationLabels = {
-                likely_valid: 'Approve recommended', likely_invalid: 'Reject recommended',
-                needs_review: 'Needs review', pending: 'Keep pending'
-            };
-            summary.innerHTML = `
-                <div><strong>Contact:</strong> ${escapeAutomationHtml(review.contact_status || 'not contacted')}</div>
-                <div><strong>AI recommendation:</strong> ${escapeAutomationHtml(recommendationLabels[review.recommended_status] || 'No recommendation')}</div>
-                <div><strong>Reason:</strong> ${escapeAutomationHtml(review.reason || 'No analysis yet')}</div>`;
             messages.innerHTML = data.messages.length ? data.messages.map(message => `
                 <article class="automation-message ${escapeAutomationHtml(message.direction)}">
                     <div class="automation-message-meta">${escapeAutomationHtml(message.direction)} via ${escapeAutomationHtml(message.channel)} · ${escapeAutomationHtml(message.created_at)}</div>
@@ -1151,7 +1134,7 @@ include 'header.php';
                     ${attachmentLinks(message.attachment_url)}
                 </article>`).join('') : '<div class="empty-state">No messages recorded yet.</div>';
         } catch (error) {
-            summary.innerHTML = `<div>${escapeAutomationHtml(error.message)}</div>`;
+            messages.innerHTML = `<div>${escapeAutomationHtml(error.message)}</div>`;
         }
     }
 
