@@ -33,7 +33,7 @@ $input = json_decode($rawBody, true);
 $orderId = (int) ($input['order_id'] ?? 0);
 $orderReference = trim((string) ($input['order_reference'] ?? ''));
 $event = (string) ($input['event'] ?? '');
-if ((!$orderId && $orderReference === '') || !in_array($event, ['message.sent', 'message.received', 'review.updated'], true)) {
+if ((!$orderId && $orderReference === '') || !in_array($event, ['email.send_requested', 'message.sent', 'message.received', 'review.updated'], true)) {
     http_response_code(422);
     echo json_encode(['success' => false, 'message' => 'Invalid callback payload']);
     exit;
@@ -64,6 +64,69 @@ $orderCheck->close();
 if (!$orderExists) {
     http_response_code(404);
     echo json_encode(['success' => false, 'message' => 'Order not found']);
+    exit;
+}
+
+if ($event === 'email.send_requested') {
+    $message = is_array($input['message'] ?? null) ? $input['message'] : [];
+    $recipient = trim((string) ($message['recipient'] ?? ''));
+    $subject = trim((string) ($message['subject'] ?? ''));
+    $original = trim((string) ($message['original'] ?? ''));
+    $supportEmail = function_exists('runtimeSecret')
+        ? runtimeSecret('OWNER_EMAIL', runtimeSecret('SMTP_FROM_EMAIL', runtimeSecret('SMTP_USERNAME')))
+        : '';
+    $allowedRecipients = array_filter([(string) $orderRow['email'], $supportEmail]);
+
+    if (!filter_var($recipient, FILTER_VALIDATE_EMAIL)
+        || !in_array(strtolower($recipient), array_map('strtolower', $allowedRecipients), true)
+        || $subject === '' || $original === '') {
+        http_response_code(422);
+        echo json_encode(['success' => false, 'message' => 'Invalid email request']);
+        exit;
+    }
+
+    try {
+        require_once __DIR__ . '/api/mail-config.php';
+        require_once __DIR__ . '/libs/GmailSMTP.php';
+        if (!USE_GMAIL_SMTP) throw new RuntimeException('Hostinger SMTP is not configured');
+
+        $verifyValue = strtolower(trim((string) (getenv('SMTP_VERIFY_TLS') ?: 'true')));
+        $smtp = new GmailSMTP(
+            GMAIL_ADDRESS,
+            GMAIL_PASSWORD,
+            false,
+            SMTP_HOST,
+            SMTP_PORT,
+            getenv('SMTP_CA_FILE') ?: '',
+            !in_array($verifyValue, ['0', 'false', 'no', 'off'], true)
+        );
+        $html = '<div style="font-family:Arial,sans-serif;line-height:1.6">'
+            . nl2br(htmlspecialchars($original, ENT_QUOTES, 'UTF-8')) . '</div>';
+        if (!$smtp->sendEmail($recipient, substr($subject, 0, 240), $html)) {
+            throw new RuntimeException('SMTP server did not accept the email');
+        }
+    } catch (Throwable $error) {
+        error_log('Automation email bridge failed: ' . $error->getMessage());
+        http_response_code(502);
+        echo json_encode(['success' => false, 'message' => 'Email delivery failed']);
+        exit;
+    }
+
+    $externalId = 'hostinger-' . bin2hex(random_bytes(12));
+    $sender = defined('SENDER_EMAIL') ? SENDER_EMAIL : GMAIL_ADDRESS;
+    $stmt = $conn->prepare(
+        "INSERT INTO customer_conversations
+         (order_id, channel, direction, sender_address, recipient_address,
+          original_message, external_message_id)
+         VALUES (?, 'email', 'outgoing', ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE id = id"
+    );
+    $stmt->bind_param('issss', $orderId, $sender, $recipient, $original, $externalId);
+    $stmt->execute();
+    $stmt->close();
+
+    echo json_encode(['success' => true, 'external_id' => $externalId]);
+    $conn->close();
     exit;
 }
 

@@ -100,7 +100,7 @@ def send_email(to_email: str, subject: str, plain_message: str) -> str:
     return message["Message-ID"] or f"email-{int(time.time() * 1000)}"
 
 
-def post_callback(payload: dict[str, Any]) -> None:
+def post_callback(payload: dict[str, Any]) -> dict[str, Any]:
     body = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode()
     timestamp = str(int(time.time()))
     signature = "sha256=" + hmac.new(
@@ -117,6 +117,25 @@ def post_callback(payload: dict[str, Any]) -> None:
             },
         )
         response.raise_for_status()
+        return response.json()
+
+
+def request_hostinger_email(
+    order_id: int, recipient: str, subject: str, plain_message: str
+) -> str:
+    response = post_callback({
+        "event": "email.send_requested",
+        "order_id": order_id,
+        "message": {
+            "channel": "email",
+            "recipient": recipient,
+            "subject": subject,
+            "original": plain_message,
+        },
+    })
+    if not response.get("success"):
+        raise RuntimeError("Hostinger rejected the email request")
+    return str(response.get("external_id") or f"hostinger-{int(time.time() * 1000)}")
 
 
 def plain_email_body(message: Any) -> str:
@@ -235,7 +254,8 @@ def process_order_event(event: dict[str, Any]) -> None:
             f"Your order {order['reference']} is now {label}.\n"
             f"{order.get('status_message', '')}\n\nTHE TRADING ROUTINE"
         )
-        external_id = send_email(
+        external_id = request_hostinger_email(
+            order["id"],
             order["customer"]["email"],
             f"Order {label}: {order['reference']}",
             message,
@@ -257,7 +277,8 @@ def process_order_event(event: dict[str, Any]) -> None:
 
     order = event["order"]
     customer_message = generate_customer_message(order)
-    external_id = send_email(
+    external_id = request_hostinger_email(
+        order["id"],
         order["customer"]["email"],
         f"Payment instructions for {order['reference']}",
         customer_message,
@@ -299,8 +320,11 @@ def process_order_event(event: dict[str, Any]) -> None:
             "will remain disabled until an official Business API number is connected."
         )
         try:
-            send_email(owner_email, f"New pending order {order['reference']}", owner_message)
-        except (smtplib.SMTPException, OSError) as error:
+            request_hostinger_email(
+                order["id"], owner_email,
+                f"New pending order {order['reference']}", owner_message
+            )
+        except (httpx.HTTPError, OSError, RuntimeError) as error:
             print(f"Owner notification failed ({type(error).__name__}).")
 
     if not callback_saved:
