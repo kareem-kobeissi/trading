@@ -1143,7 +1143,6 @@ include 'header.php';
                 <article class="automation-message ${escapeAutomationHtml(message.direction)}">
                     <div class="automation-message-meta">${escapeAutomationHtml(message.direction)} via ${escapeAutomationHtml(message.channel)} · ${escapeAutomationHtml(message.created_at)}</div>
                     <h4>Original message</h4><pre>${escapeAutomationHtml(message.original_message)}</pre>
-                    ${message.translated_message ? `<h4>English translation</h4><pre>${escapeAutomationHtml(message.translated_message)}</pre>` : ''}
                     ${message.ai_summary ? `<h4>AI summary</h4><pre>${escapeAutomationHtml(message.ai_summary)}</pre>` : ''}
                     ${attachmentLinks(message.attachment_url)}
                 </article>`).join('') : '<div class="empty-state">No messages recorded yet.</div>';
