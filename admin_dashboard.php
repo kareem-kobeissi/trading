@@ -887,6 +887,12 @@ include 'header.php';
         <button type="button" class="automation-close" onclick="closeAutomationPanel()" aria-label="Close">&times;</button>
         <h2 id="automationModalTitle">Customer Conversation Review</h2>
         <div id="automationMessages" class="automation-messages"></div>
+        <form id="automationReplyForm" class="automation-reply" onsubmit="sendAutomationReply(event)">
+            <label for="automationReplyMessage">Message customer</label>
+            <textarea id="automationReplyMessage" maxlength="10000" rows="5" placeholder="Write your message to the customer..." required></textarea>
+            <button type="submit" class="btn btn-primary">Send and save</button>
+            <span id="automationReplyStatus" role="status"></span>
+        </form>
     </div>
 </div>
 
@@ -897,6 +903,11 @@ include 'header.php';
     .automation-modal-card h2 { margin: 0 2.5rem 1rem 0; color: var(--primary-color); }
     .automation-close { position: absolute; right: 1rem; top: .8rem; border: 0; background: transparent; color: #fff; font-size: 2rem; cursor: pointer; }
     .automation-messages { display: grid; gap: .9rem; }
+    .automation-reply { display:grid; gap:.75rem; margin-top:1rem; padding-top:1rem; border-top:1px solid rgba(255,255,255,.1); }
+    .automation-reply label { color:#78e8ff; font-weight:700; }
+    .automation-reply textarea { width:100%; resize:vertical; padding:.9rem; color:#fff; background:#091229; border:1px solid rgba(0,212,255,.3); border-radius:10px; font:inherit; }
+    .automation-reply button { justify-self:start; }
+    #automationReplyStatus { color:#b9cae0; font-size:.9rem; }
     .automation-message { padding: 1rem; border: 1px solid rgba(255,255,255,.1); border-radius: 12px; background: rgba(255,255,255,.035); }
     .automation-message.incoming { border-color: rgba(245,157,0,.35); }
     .automation-message-meta { margin-bottom: .65rem; color: #8da2c8; font-size: .8rem; }
@@ -1120,6 +1131,9 @@ include 'header.php';
         const modal = document.getElementById('automationModal');
         const messages = document.getElementById('automationMessages');
         modal.hidden = false;
+        modal.dataset.orderId = orderId;
+        document.getElementById('automationReplyMessage').value = '';
+        document.getElementById('automationReplyStatus').textContent = '';
         messages.innerHTML = '<div>Loading conversation...</div>';
         try {
             const response = await fetch(`get_order_automation.php?order_id=${encodeURIComponent(orderId)}`, { cache: 'no-store' });
@@ -1135,6 +1149,36 @@ include 'header.php';
                 </article>`).join('') : '<div class="empty-state">No messages recorded yet.</div>';
         } catch (error) {
             messages.innerHTML = `<div>${escapeAutomationHtml(error.message)}</div>`;
+        }
+    }
+
+    async function sendAutomationReply(event) {
+        event.preventDefault();
+        const modal = document.getElementById('automationModal');
+        const messageInput = document.getElementById('automationReplyMessage');
+        const status = document.getElementById('automationReplyStatus');
+        const button = event.currentTarget.querySelector('button[type="submit"]');
+        const orderId = Number(modal.dataset.orderId || 0);
+        const message = messageInput.value.trim();
+        if (!orderId || !message) return;
+
+        button.disabled = true;
+        status.textContent = 'Sending...';
+        try {
+            const response = await fetch('admin_send_customer_message.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ order_id: orderId, message })
+            });
+            const result = await response.json();
+            if (!response.ok || !result.success) throw new Error(result.message || 'Unable to send message');
+            messageInput.value = '';
+            status.textContent = 'Message sent and saved.';
+            await openAutomationPanel(orderId);
+        } catch (error) {
+            status.textContent = error.message;
+        } finally {
+            button.disabled = false;
         }
     }
 
