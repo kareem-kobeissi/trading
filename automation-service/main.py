@@ -15,7 +15,7 @@ from html import escape
 from typing import Any
 
 import httpx
-from fastapi import FastAPI, Header, HTTPException, Request
+from fastapi import BackgroundTasks, FastAPI, Header, HTTPException, Request
 from openai import OpenAI, OpenAIError
 
 app = FastAPI(title="TTR Customer Automation", version="1.0.0")
@@ -210,12 +210,21 @@ def health() -> dict[str, str]:
 @app.post("/webhooks/orders")
 async def pending_order(
     request: Request,
+    background_tasks: BackgroundTasks,
     x_ttr_timestamp: str = Header(default=""),
     x_ttr_signature: str = Header(default=""),
 ) -> dict[str, Any]:
     body = await request.body()
     verify_signature(body, x_ttr_timestamp, x_ttr_signature)
     event = json.loads(body)
+    if event.get("event_type") not in {"order.pending", "order.status_changed"}:
+        raise HTTPException(status_code=422, detail="Unsupported event")
+
+    background_tasks.add_task(process_order_event, event)
+    return {"accepted": True, "event_id": event.get("event_id")}
+
+
+def process_order_event(event: dict[str, Any]) -> None:
     if event.get("event_type") == "order.status_changed":
         order = event["order"]
         status = str(order.get("status", "pending"))
@@ -244,10 +253,8 @@ async def pending_order(
             })
         except (httpx.HTTPError, OSError) as error:
             print(f"Status callback unavailable; email was still sent ({type(error).__name__}).")
-        return {"accepted": True, "event_id": event.get("event_id")}
+        return
 
-    if event.get("event_type") != "order.pending":
-        raise HTTPException(status_code=422, detail="Unsupported event")
     order = event["order"]
     customer_message = generate_customer_message(order)
     external_id = send_email(
@@ -296,11 +303,8 @@ async def pending_order(
         except (smtplib.SMTPException, OSError) as error:
             print(f"Owner notification failed ({type(error).__name__}).")
 
-    return {
-        "accepted": True,
-        "event_id": event.get("event_id"),
-        "callback_saved": callback_saved,
-    }
+    if not callback_saved:
+        print(f"Order {order['reference']} email sent, but its callback was not saved.")
 
 
 @app.post("/jobs/poll-email")
