@@ -147,6 +147,21 @@ try {
             </html>";
 
             $plainTextMessage = "Your verification code is: " . $code . "\n\nThis code will expire in 15 minutes.\n\nIf you did not request this code, please ignore this email.";
+            require_once __DIR__ . '/email_template.php';
+            $safeCode = htmlspecialchars($code, ENT_QUOTES, 'UTF-8');
+            $verificationBody = "
+                <p style='margin:0 0 16px'>Hello,</p>
+                <p style='margin:0 0 20px'>Use the verification code below to complete your Trading Routine registration.</p>
+                <div style='margin:24px 0;padding:20px;text-align:center;background:#081329;border:1px solid #27d7f5;border-radius:12px'>
+                    <div style='color:#64e7ff;font-size:34px;font-weight:800;letter-spacing:7px;font-family:Courier New,monospace'>{$safeCode}</div>
+                </div>
+                <p style='margin:0 0 12px'>This code expires in <strong style='color:#ffffff'>15 minutes</strong>.</p>
+                <p style='margin:0;color:#8fa3bf;font-size:13px'>If you did not request this code, you can safely ignore this email. Never share your verification code.</p>";
+            $htmlMessage = brandedEmailTemplate(
+                'Verify Your Email',
+                $verificationBody,
+                'Your Trading Routine verification code is ' . $code
+            );
 
             if (defined('USE_GMAIL_SMTP') && USE_GMAIL_SMTP) {
                 // Send via Gmail SMTP

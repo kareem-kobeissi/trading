@@ -34,6 +34,8 @@ $isLocalhost = isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'lo
 $baseUrl = $isLocalhost ? 'http://localhost/trading' : 'https://thetradingroutine.com';
 $resetLink = $baseUrl . '/reset_password.php?token=' . $token;
 
+require_once __DIR__ . '/email_template.php';
+
 // Send email
 $body = "
 <!DOCTYPE html>
@@ -70,6 +72,20 @@ $body = "
 </body>
 </html>
 ";
+$safeUsername = htmlspecialchars((string) $user['username'], ENT_QUOTES, 'UTF-8');
+$safeResetLink = htmlspecialchars($resetLink, ENT_QUOTES, 'UTF-8');
+$body = brandedEmailTemplate(
+    'Reset Your Password',
+    "<p style='margin:0 0 16px'>Hello <strong style='color:#64e7ff'>{$safeUsername}</strong>,</p>
+     <p style='margin:0 0 22px'>We received a request to reset your password. This secure link expires in <strong style='color:#ffffff'>1 hour</strong>.</p>
+     <div style='text-align:center;margin:26px 0'>
+       <a href='{$safeResetLink}' style='display:inline-block;padding:14px 26px;border-radius:10px;background:#27d7f5;color:#071224;font-weight:800;text-decoration:none'>Change Password</a>
+     </div>
+     <p style='margin:0 0 8px;color:#8fa3bf;font-size:13px'>If the button does not work, copy this link:</p>
+     <p style='margin:0 0 18px;word-break:break-all'><a href='{$safeResetLink}' style='color:#64e7ff'>{$safeResetLink}</a></p>
+     <p style='margin:0;color:#8fa3bf;font-size:13px'>If you did not request a password reset, ignore this email. Your password will remain unchanged.</p>",
+    'Secure password reset instructions from THE TRADING ROUTINE'
+);
 
 // SMTP send
 $smtpHost = getenv('SMTP_HOST') ?: 'smtp.hostinger.com';

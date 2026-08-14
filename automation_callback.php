@@ -88,6 +88,7 @@ if ($event === 'email.send_requested') {
     try {
         require_once __DIR__ . '/api/mail-config.php';
         require_once __DIR__ . '/libs/GmailSMTP.php';
+        require_once __DIR__ . '/email_template.php';
         if (!USE_GMAIL_SMTP) throw new RuntimeException('Hostinger SMTP is not configured');
 
         $verifyValue = strtolower(trim((string) (getenv('SMTP_VERIFY_TLS') ?: 'true')));
@@ -100,8 +101,7 @@ if ($event === 'email.send_requested') {
             getenv('SMTP_CA_FILE') ?: '',
             !in_array($verifyValue, ['0', 'false', 'no', 'off'], true)
         );
-        $html = '<div style="font-family:Arial,sans-serif;line-height:1.6">'
-            . nl2br(htmlspecialchars($original, ENT_QUOTES, 'UTF-8')) . '</div>';
+        $html = brandedPlainTextEmail($subject, $original, $subject);
         if (!$smtp->sendEmail($recipient, substr($subject, 0, 240), $html)) {
             throw new RuntimeException('SMTP server did not accept the email');
         }
