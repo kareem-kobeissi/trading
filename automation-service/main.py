@@ -16,6 +16,7 @@ from typing import Any
 
 import httpx
 from fastapi import BackgroundTasks, FastAPI, Header, HTTPException, Request
+from fastapi.responses import PlainTextResponse
 from openai import OpenAI, OpenAIError
 
 app = FastAPI(title="TTR Customer Automation", version="1.0.0")
@@ -138,6 +139,95 @@ def request_hostinger_email(
     return str(response.get("external_id") or f"hostinger-{int(time.time() * 1000)}")
 
 
+def whatsapp_recipient(phone: str) -> str:
+    return re.sub(r"\D", "", phone)
+
+
+def verify_meta_signature(body: bytes, signature: str) -> None:
+    app_secret = env("META_APP_SECRET")
+    expected = "sha256=" + hmac.new(app_secret.encode(), body, hashlib.sha256).hexdigest()
+    if not app_secret or not signature or not hmac.compare_digest(expected, signature):
+        raise HTTPException(status_code=401, detail="Invalid Meta webhook signature")
+
+
+def whatsapp_graph_post(payload: dict[str, Any]) -> dict[str, Any]:
+    phone_number_id = env("WHATSAPP_PHONE_NUMBER_ID")
+    token = env("WHATSAPP_ACCESS_TOKEN")
+    if not phone_number_id or not token:
+        raise RuntimeError("WhatsApp Cloud API is not configured")
+    with httpx.Client(timeout=25) as client:
+        response = client.post(
+            f"https://graph.facebook.com/v25.0/{phone_number_id}/messages",
+            json={"messaging_product": "whatsapp", **payload},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        response.raise_for_status()
+        return response.json()
+
+
+def whatsapp_message_id(response: dict[str, Any]) -> str:
+    messages = response.get("messages") or []
+    return str(messages[0].get("id", "")) if messages else ""
+
+
+def send_whatsapp_text(recipient: str, message: str) -> str:
+    response = whatsapp_graph_post({
+        "to": whatsapp_recipient(recipient),
+        "type": "text",
+        "text": {"preview_url": True, "body": message},
+    })
+    return whatsapp_message_id(response)
+
+
+def send_whatsapp_order_template(order: dict[str, Any]) -> str:
+    template_name = env("WHATSAPP_ORDER_TEMPLATE")
+    if not template_name:
+        raise RuntimeError("WhatsApp order template is not configured")
+    response = whatsapp_graph_post({
+        "to": whatsapp_recipient(order["customer"]["phone"]),
+        "type": "template",
+        "template": {
+            "name": template_name,
+            "language": {"code": env("WHATSAPP_TEMPLATE_LANGUAGE", "en_US")},
+            "components": [{
+                "type": "body",
+                "parameters": [
+                    {"type": "text", "text": str(order["customer"]["name"])},
+                    {"type": "text", "text": str(order["reference"])},
+                ],
+            }],
+        },
+    })
+    return whatsapp_message_id(response)
+
+
+def lookup_order_by_phone(phone: str) -> dict[str, Any]:
+    result = post_callback({"event": "customer.lookup_by_phone", "phone": phone})
+    order = result.get("order")
+    if not isinstance(order, dict):
+        raise RuntimeError("No order found for WhatsApp customer")
+    return order
+
+
+def record_whatsapp_message(
+    order_id: int, event: str, sender: str, recipient: str,
+    message: str, external_id: str
+) -> bool:
+    result = post_callback({
+        "event": event,
+        "order_id": order_id,
+        "message": {
+            "channel": "whatsapp",
+            "sender": sender,
+            "recipient": recipient,
+            "original": message,
+            "external_id": external_id,
+        },
+        "preserve_review": True,
+    })
+    return result.get("message_saved") is not False
+
+
 def plain_email_body(message: Any) -> str:
     if message.is_multipart():
         for part in message.walk():
@@ -226,6 +316,99 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@app.get("/webhooks/whatsapp", response_class=PlainTextResponse)
+def verify_whatsapp_webhook(request: Request) -> str:
+    params = request.query_params
+    mode = params.get("hub.mode", "")
+    token = params.get("hub.verify_token", "")
+    challenge = params.get("hub.challenge", "")
+    verify_token = env("WHATSAPP_VERIFY_TOKEN")
+    if not verify_token or mode != "subscribe" or not hmac.compare_digest(token, verify_token):
+        raise HTTPException(status_code=403, detail="Webhook verification failed")
+    if not challenge.isdigit():
+        raise HTTPException(status_code=400, detail="Invalid webhook challenge")
+    return challenge
+
+
+@app.post("/webhooks/whatsapp")
+async def receive_whatsapp_webhook(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    x_hub_signature_256: str = Header(default=""),
+) -> dict[str, str]:
+    body = await request.body()
+    verify_meta_signature(body, x_hub_signature_256)
+    payload = json.loads(body)
+    background_tasks.add_task(process_whatsapp_webhook, payload)
+    return {"status": "accepted"}
+
+
+def process_whatsapp_webhook(payload: dict[str, Any]) -> None:
+    for entry in payload.get("entry", []):
+        for change in entry.get("changes", []):
+            value = change.get("value") or {}
+            business_number = str((value.get("metadata") or {}).get("display_phone_number", ""))
+            for message in value.get("messages", []):
+                customer_phone = str(message.get("from", ""))
+                message_id = str(message.get("id", ""))
+                message_type = str(message.get("type", ""))
+                selection = ""
+                displayed_text = ""
+
+                if message_type == "button":
+                    button = message.get("button") or {}
+                    selection = str(button.get("payload") or button.get("text") or "")
+                    displayed_text = str(button.get("text") or selection)
+                elif message_type == "interactive":
+                    interactive = message.get("interactive") or {}
+                    reply = interactive.get("button_reply") or interactive.get("list_reply") or {}
+                    selection = str(reply.get("id") or reply.get("title") or "")
+                    displayed_text = str(reply.get("title") or selection)
+                elif message_type == "text":
+                    displayed_text = str((message.get("text") or {}).get("body", "")).strip()
+                    selection = displayed_text
+                else:
+                    continue
+
+                try:
+                    order = lookup_order_by_phone(customer_phone)
+                    order_id = int(order["id"])
+                    incoming_is_new = record_whatsapp_message(
+                        order_id, "message.received", customer_phone, business_number,
+                        displayed_text, message_id
+                    )
+                    if not incoming_is_new:
+                        continue
+
+                    normalized = selection.strip().lower().replace(" ", "_")
+                    if "whish" in normalized:
+                        response_text = (
+                            "Whish Money payment details\n\n"
+                            f"Send the exact order amount to {env('WHISH_PAYMENT_NUMBER', '+961 71 493 997')}.\n"
+                            "After payment, reply here with the transaction reference and a clear screenshot. "
+                            "Payment is reviewed manually before access is activated."
+                        )
+                    elif "broker" in normalized:
+                        response_text = (
+                            "Create your broker account using our official partner link:\n"
+                            f"{env('BROKER_SIGNUP_URL', 'https://portal.bbcorp.trade/auth/jwt/sign-up/partner/X2sUYi/prod/KAS663')}\n\n"
+                            "After registration, reply here and our team will review your request."
+                        )
+                    else:
+                        response_text = (
+                            "Please choose one of the options in the order message: "
+                            "Pay with Whish Money or Sign up with our broker."
+                        )
+
+                    outgoing_id = send_whatsapp_text(customer_phone, response_text)
+                    record_whatsapp_message(
+                        order_id, "message.sent", business_number, customer_phone,
+                        response_text, outgoing_id
+                    )
+                except (httpx.HTTPError, OSError, RuntimeError, ValueError, KeyError) as error:
+                    print(f"WhatsApp message processing failed ({type(error).__name__}): {error}")
+
+
 @app.post("/webhooks/orders")
 async def pending_order(
     request: Request,
@@ -308,6 +491,22 @@ def process_order_event(event: dict[str, Any]) -> None:
         callback_saved = False
         print(f"Callback unavailable; email was still sent ({type(error).__name__}).")
 
+    customer_phone = str(order["customer"].get("phone", ""))
+    if env("WHATSAPP_ORDER_TEMPLATE") and whatsapp_recipient(customer_phone):
+        template_record = (
+            f"Hello {order['customer']['name']}, we received order {order['reference']}. "
+            "Choose Pay with Whish Money or Sign up with our broker."
+        )
+        try:
+            whatsapp_id = send_whatsapp_order_template(order)
+            record_whatsapp_message(
+                int(order["id"]), "message.sent",
+                env("WHATSAPP_BUSINESS_NUMBER", "+96178756329"), customer_phone,
+                template_record, whatsapp_id
+            )
+        except (httpx.HTTPError, OSError, RuntimeError, KeyError) as error:
+            print(f"WhatsApp order message failed ({type(error).__name__}): {error}")
+
     owner_email = env("OWNER_EMAIL")
     if owner_email:
         owner_message = (
@@ -316,8 +515,7 @@ def process_order_event(event: dict[str, Any]) -> None:
             f"Email: {order['customer']['email']}\n"
             f"Phone: {order['customer']['phone']}\n"
             f"Total: {order['total']} {order.get('currency', 'USD')}\n\n"
-            "The customer was contacted automatically by email. WhatsApp automation "
-            "will remain disabled until an official Business API number is connected."
+            "The customer was contacted through the configured automated channels."
         )
         try:
             request_hostinger_email(

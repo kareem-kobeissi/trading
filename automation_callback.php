@@ -30,9 +30,48 @@ if (!hash_equals($expectedSignature, $providedSignature)) {
 }
 
 $input = json_decode($rawBody, true);
+$event = (string) ($input['event'] ?? '');
+$messageWasNew = null;
+
+if ($event === 'customer.lookup_by_phone') {
+    $requestedPhone = preg_replace('/\D+/', '', (string) ($input['phone'] ?? ''));
+    if (strlen($requestedPhone) < 7) {
+        http_response_code(422);
+        echo json_encode(['success' => false, 'message' => 'Invalid phone number']);
+        exit;
+    }
+
+    $lookup = $conn->query(
+        "SELECT id, order_ref, name, email, phone, status
+         FROM orders
+         ORDER BY (status = 'pending') DESC, id DESC
+         LIMIT 250"
+    );
+    $matched = null;
+    while ($row = $lookup->fetch_assoc()) {
+        $storedPhone = preg_replace('/\D+/', '', (string) $row['phone']);
+        if ($storedPhone !== '' && (
+            hash_equals($storedPhone, $requestedPhone)
+            || (strlen($storedPhone) >= 7 && substr($storedPhone, -7) === substr($requestedPhone, -7))
+        )) {
+            $matched = $row;
+            break;
+        }
+    }
+
+    if (!$matched) {
+        http_response_code(404);
+        echo json_encode(['success' => false, 'message' => 'No customer order matches this phone']);
+        exit;
+    }
+
+    echo json_encode(['success' => true, 'order' => $matched]);
+    $conn->close();
+    exit;
+}
+
 $orderId = (int) ($input['order_id'] ?? 0);
 $orderReference = trim((string) ($input['order_reference'] ?? ''));
-$event = (string) ($input['event'] ?? '');
 if ((!$orderId && $orderReference === '') || !in_array($event, ['email.send_requested', 'message.sent', 'message.received', 'review.updated'], true)) {
     http_response_code(422);
     echo json_encode(['success' => false, 'message' => 'Invalid callback payload']);
@@ -144,10 +183,27 @@ if ($event === 'message.sent' || $event === 'message.received') {
     $attachmentUrl = trim((string) ($message['attachment_url'] ?? ''));
     $externalId = substr(trim((string) ($message['external_id'] ?? '')), 0, 255);
 
-    if ($event === 'message.received' && strcasecmp($sender, (string) $orderRow['email']) !== 0) {
-        http_response_code(403);
-        echo json_encode(['success' => false, 'message' => 'Reply sender does not match the order customer']);
-        exit;
+    if ($event === 'message.received') {
+        $senderMatches = $channel === 'email'
+            ? strcasecmp($sender, (string) $orderRow['email']) === 0
+            : true;
+        if ($channel === 'whatsapp') {
+            $phoneStmt = $conn->prepare('SELECT phone FROM orders WHERE id = ? LIMIT 1');
+            $phoneStmt->bind_param('i', $orderId);
+            $phoneStmt->execute();
+            $phoneRow = $phoneStmt->get_result()->fetch_assoc();
+            $phoneStmt->close();
+            $storedDigits = preg_replace('/\D+/', '', (string) ($phoneRow['phone'] ?? ''));
+            $senderDigits = preg_replace('/\D+/', '', $sender);
+            $senderMatches = $storedDigits !== '' && $senderDigits !== ''
+                && ($storedDigits === $senderDigits
+                    || substr($storedDigits, -7) === substr($senderDigits, -7));
+        }
+        if (!$senderMatches) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'message' => 'Reply sender does not match the order customer']);
+            exit;
+        }
     }
 
     $savedAttachments = [];
@@ -203,6 +259,7 @@ if ($event === 'message.sent' || $event === 'message.received') {
         $externalId
     );
     $stmt->execute();
+    $messageWasNew = $stmt->affected_rows > 0;
     $stmt->close();
 }
 
@@ -244,5 +301,5 @@ $stmt->execute();
 $stmt->close();
 }
 
-echo json_encode(['success' => true]);
+echo json_encode(['success' => true, 'message_saved' => $messageWasNew]);
 $conn->close();
