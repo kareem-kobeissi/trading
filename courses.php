@@ -2,9 +2,10 @@
 // courses.php
 include 'header.php';
 require_once 'config.php';
+require_once 'commerce_config.php';
 
 // Get course information
-$course_price = 200;
+$course_price = coursePriceUsd();
 $course_id = 'basics'; // Default course section
 
 // Check if user is logged in and has unlocked access to course
@@ -132,14 +133,14 @@ $totalLessonCount = $foundationLessonCount + $advancedLessonCount + $riskLessonC
         <div class="course-info-card">
             <div class="course-header">
                 <h2>Complete Trading Mastery Program</h2>
-                <div class="course-price" id="courseBadgeStatus" style="font-weight: 800; font-size: 0.95rem; text-transform: uppercase;">
+                <div class="course-price" id="courseBadgeStatus">
                     <?php
                     if ($course_access_status === 'unlocked') {
                         echo '<span style="color: #00ff88;"><i class="fas fa-check-circle"></i> APPROVED</span>';
                     } elseif ($course_access_status === 'pending') {
                         echo '<span style="color: #f59d00;"><i class="fas fa-clock"></i> PENDING</span>';
                     } else {
-                        echo '<span>$200 <small style="font-size:.72em;opacity:.82;">or FREE with Broker Registration</small></span>';
+                        echo '<span class="course-offer"><strong>$' . number_format($course_price, 0) . '</strong><span class="course-offer-or">or</span><span class="course-offer-free">FREE with Broker Registration</span></span>';
                     }
                     ?>
                 </div>
@@ -162,7 +163,7 @@ $totalLessonCount = $foundationLessonCount + $advancedLessonCount + $riskLessonC
                 <?php elseif ($course_access_status === 'pending'): ?>
                     <button type="button" class="btn-buy-course" disabled style="opacity:.7;cursor:not-allowed;background:#333;color:#f59d00;border:1px solid #f59d00;"><i class="fas fa-clock" aria-hidden="true"></i> Pending Admin Approval</button>
                 <?php else: ?>
-                    <button type="button" class="btn-buy-course" onclick="requestCourseAccess()">Enroll — $200 or Free with Broker</button>
+                    <button type="button" class="btn-buy-course" onclick="requestCourseAccess()">Enroll — $<?php echo number_format($course_price, 0); ?> or Free with Broker</button>
                 <?php endif; ?>
             </div>
         </div>
@@ -286,10 +287,40 @@ $totalLessonCount = $foundationLessonCount + $advancedLessonCount + $riskLessonC
     }
 
     .course-price {
-        font-size: 2.5rem;
+        font-size: 1rem;
         font-weight: bold;
         color: #00ff88;
         text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        max-width: min(100%, 360px);
+        white-space: normal;
+    }
+
+    .course-offer {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+        gap: 0.35rem 0.55rem;
+        line-height: 1.25;
+        text-align: right;
+    }
+
+    .course-offer strong {
+        color: #00ff88;
+        font-size: clamp(1.55rem, 3vw, 2.15rem);
+    }
+
+    .course-offer-or {
+        color: var(--text-muted);
+        font-size: 0.82rem;
+        text-transform: lowercase;
+    }
+
+    .course-offer-free {
+        flex-basis: 100%;
+        color: #55dcf5;
+        font-size: clamp(0.82rem, 1.7vw, 1rem);
+        letter-spacing: 0.02em;
     }
 
     .course-details p {
@@ -1081,6 +1112,11 @@ $totalLessonCount = $foundationLessonCount + $advancedLessonCount + $riskLessonC
 
         .course-price {
             font-size: 2rem;
+        }
+
+        .course-offer {
+            justify-content: flex-start;
+            text-align: left;
         }
     }
 
@@ -1931,6 +1967,8 @@ $totalLessonCount = $foundationLessonCount + $advancedLessonCount + $riskLessonC
 <script>
     // Course price and ID for cart operations
     const coursePrice = <?php echo json_encode((float) $course_price); ?>;
+    const courseOfferMarkup = `<span class="course-offer"><strong>$${coursePrice.toFixed(0)}</strong><span class="course-offer-or">or</span><span class="course-offer-free">FREE with Broker Registration</span></span>`;
+    const courseActionLabel = `Enroll — $${coursePrice.toFixed(0)} or Free with Broker`;
     const courseId = '<?php echo $course_id; ?>';
     const userId = '<?php echo isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 'null'; ?>';
 
@@ -2265,7 +2303,7 @@ $totalLessonCount = $foundationLessonCount + $advancedLessonCount + $riskLessonC
         } catch(e) {
             console.error('Request failed:', e);
             if (actionArea) {
-                actionArea.innerHTML = '<button type="button" class="btn-buy-course" onclick="requestCourseAccess()">Enroll — $200 or Free with Broker</button>';
+                actionArea.innerHTML = `<button type="button" class="btn-buy-course" onclick="requestCourseAccess()">${courseActionLabel}</button>`;
             }
         }
     }
@@ -2345,7 +2383,7 @@ $totalLessonCount = $foundationLessonCount + $advancedLessonCount + $riskLessonC
 
         if (!isLoggedIn) {
             actionArea.innerHTML = '<a href="login.php?redirect=courses.php" class="btn-buy-course">Login to Enroll</a>';
-            if (badgeStatus) badgeStatus.innerHTML = '<span>$200 <small style="font-size:.72em;opacity:.82;">or FREE with Broker Registration</small></span>';
+            if (badgeStatus) badgeStatus.innerHTML = courseOfferMarkup;
             return;
         }
 
@@ -2358,8 +2396,8 @@ $totalLessonCount = $foundationLessonCount + $advancedLessonCount + $riskLessonC
             actionArea.innerHTML = '<button type="button" class="btn-buy-course" disabled style="opacity:.7;cursor:not-allowed;background:#333;color:#f59d00;border:1px solid #f59d00;"><i class="fas fa-clock" aria-hidden="true"></i> Pending Admin Approval</button>';
             if (badgeStatus) badgeStatus.innerHTML = '<span style="color: #f59d00;"><i class="fas fa-clock"></i> PENDING</span>';
         } else {
-            actionArea.innerHTML = '<button type="button" class="btn-buy-course" onclick="requestCourseAccess()">Enroll — $200 or Free with Broker</button>';
-            if (badgeStatus) badgeStatus.innerHTML = '<span>$200 <small style="font-size:.72em;opacity:.82;">or FREE with Broker Registration</small></span>';
+            actionArea.innerHTML = `<button type="button" class="btn-buy-course" onclick="requestCourseAccess()">${courseActionLabel}</button>`;
+            if (badgeStatus) badgeStatus.innerHTML = courseOfferMarkup;
         }
     }
 

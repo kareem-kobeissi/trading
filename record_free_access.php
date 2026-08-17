@@ -1,5 +1,6 @@
 <?php
 require_once 'config.php';
+require_once 'commerce_config.php';
 require_once 'user_schema.php';
 require_once 'automation_queue.php';
 
@@ -67,7 +68,7 @@ if (!$alreadyRecorded) {
     $status = 'pending';
     // Standard course price. Access may be granted free after the administrator
     // confirms registration through the official broker partner.
-    $total = 200.00;
+    $total = coursePriceUsd();
 
     $conn->begin_transaction();
     try {

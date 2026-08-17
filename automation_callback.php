@@ -42,7 +42,8 @@ if ($event === 'customer.lookup_by_phone') {
     }
 
     $lookup = $conn->query(
-        "SELECT id, order_ref, name, email, phone, status
+        "SELECT id, order_ref, name, email, phone, status,
+                total_price AS total, 'USD' AS currency
          FROM orders
          ORDER BY (status = 'pending') DESC, id DESC
          LIMIT 250"

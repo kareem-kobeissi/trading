@@ -205,11 +205,6 @@ def order_payment_amount(order: dict[str, Any]) -> str:
             except (TypeError, ValueError):
                 continue
         amount = sum(item_amounts)
-    if amount <= 0 and any(
-        isinstance(item, dict) and str(item.get("type", "")).strip() == "course"
-        for item in order.get("items", [])
-    ):
-        amount = 200
     currency = str(order.get("currency") or "USD").strip().upper()
     formatted = f"{amount:,.2f}".rstrip("0").rstrip(".")
     return f"${formatted} {currency}"
