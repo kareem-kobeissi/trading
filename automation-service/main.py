@@ -179,6 +179,27 @@ def send_whatsapp_text(recipient: str, message: str) -> str:
     return whatsapp_message_id(response)
 
 
+def send_whatsapp_image(recipient: str, image_url: str, caption: str = "") -> str:
+    image: dict[str, str] = {"link": image_url}
+    if caption:
+        image["caption"] = caption
+    response = whatsapp_graph_post({
+        "to": whatsapp_recipient(recipient),
+        "type": "image",
+        "image": image,
+    })
+    return whatsapp_message_id(response)
+
+
+def order_product_names(order: dict[str, Any]) -> str:
+    names = [
+        str(item.get("name", "")).strip()
+        for item in order.get("items", [])
+        if isinstance(item, dict) and str(item.get("name", "")).strip()
+    ]
+    return " & ".join(names) or "your selected product"
+
+
 def send_whatsapp_order_template(order: dict[str, Any]) -> str:
     template_name = env("WHATSAPP_ORDER_TEMPLATE")
     if not template_name:
@@ -193,7 +214,10 @@ def send_whatsapp_order_template(order: dict[str, Any]) -> str:
                 "type": "body",
                 "parameters": [
                     {"type": "text", "text": str(order["customer"]["name"])},
-                    {"type": "text", "text": str(order["reference"])},
+                    {
+                        "type": "text",
+                        "text": f"{order['reference']} for {order_product_names(order)}",
+                    },
                 ],
             }],
         },
@@ -381,18 +405,28 @@ def process_whatsapp_webhook(payload: dict[str, Any]) -> None:
                         continue
 
                     normalized = selection.strip().lower().replace(" ", "_")
+                    order_reference = str(order.get("order_ref") or order.get("reference") or "").strip()
+                    products = order_product_names(order)
+                    order_context = f"Order *{order_reference}* for *{products}*.\n\n" if order_reference else ""
                     if "whish" in normalized:
                         response_text = (
-                            "Whish Money payment details\n\n"
-                            f"Send the exact order amount to {env('WHISH_PAYMENT_NUMBER', '+961 71 493 997')}.\n"
-                            "After payment, reply here with the transaction reference and a clear screenshot. "
-                            "Payment is reviewed manually before access is activated."
+                            order_context +
+                            "*Whish Money Payment*\n\n"
+                            f"Please send the exact order amount to *{env('WHISH_PAYMENT_NUMBER', '+961 71 493 997')}*.\n\n"
+                            "After payment, reply here with:\n\n"
+                            "- The *transaction reference*\n"
+                            "- A *clear payment screenshot*\n\n"
+                            "Your payment will be reviewed manually, and access will be activated once confirmed."
                         )
                     elif "broker" in normalized:
                         response_text = (
-                            "Create your broker account using our official partner link:\n"
-                            f"{env('BROKER_SIGNUP_URL', 'https://portal.bbcorp.trade/auth/jwt/sign-up/partner/X2sUYi/prod/KAS663')}\n\n"
-                            "After registration, reply here and our team will review your request."
+                            order_context +
+                            "Hello 👋\n\n"
+                            "Please register with our broker partner using the link below:\n\n"
+                            f"👉 {env('BROKER_SIGNUP_URL', 'https://portal.bbcorp.trade/auth/jwt/sign-up/partner/X2sUYi/prod/KAS663')}\n\n"
+                            "Create your account through this link and complete the registration and verification process.\n\n"
+                            "Once completed, send us your *trading account login number* for confirmation.\n\n"
+                            "*The Trading Routine*"
                         )
                     else:
                         response_text = (
@@ -405,6 +439,20 @@ def process_whatsapp_webhook(payload: dict[str, Any]) -> None:
                         order_id, "message.sent", business_number, customer_phone,
                         response_text, outgoing_id
                     )
+                    if "whish" in normalized:
+                        qr_url = env(
+                            "WHISH_QR_IMAGE_URL",
+                            "https://thetradingroutine.com/barcode.jpeg",
+                        )
+                        qr_id = send_whatsapp_image(
+                            customer_phone,
+                            qr_url,
+                            "Scan this QR code to pay with Whish Money.",
+                        )
+                        record_whatsapp_message(
+                            order_id, "message.sent", business_number, customer_phone,
+                            "Whish Money payment QR code.", qr_id
+                        )
                 except (httpx.HTTPError, OSError, RuntimeError, ValueError, KeyError) as error:
                     print(f"WhatsApp message processing failed ({type(error).__name__}): {error}")
 
@@ -494,7 +542,8 @@ def process_order_event(event: dict[str, Any]) -> None:
     customer_phone = str(order["customer"].get("phone", ""))
     if env("WHATSAPP_ORDER_TEMPLATE") and whatsapp_recipient(customer_phone):
         template_record = (
-            f"Hello {order['customer']['name']}, we received order {order['reference']}. "
+            f"Hello {order['customer']['name']}, we received order {order['reference']} "
+            f"for {order_product_names(order)}. "
             "Choose Pay with Whish Money or Sign up with our broker."
         )
         try:

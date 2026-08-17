@@ -65,6 +65,60 @@ if ($event === 'customer.lookup_by_phone') {
         exit;
     }
 
+    $matched['items'] = [];
+    $eventStmt = $conn->prepare(
+        "SELECT payload_json
+         FROM automation_events
+         WHERE order_id = ? AND event_type = 'order.pending'
+         ORDER BY id DESC
+         LIMIT 1"
+    );
+    if ($eventStmt) {
+        $matchedOrderId = (int) $matched['id'];
+        $eventStmt->bind_param('i', $matchedOrderId);
+        $eventStmt->execute();
+        $eventRow = $eventStmt->get_result()->fetch_assoc();
+        $eventStmt->close();
+        $eventPayload = json_decode((string) ($eventRow['payload_json'] ?? ''), true);
+        $payloadItems = $eventPayload['order']['items'] ?? [];
+        if (is_array($payloadItems)) {
+            foreach ($payloadItems as $item) {
+                if (is_array($item) && trim((string) ($item['name'] ?? '')) !== '') {
+                    $matched['items'][] = [
+                        'type' => trim((string) ($item['type'] ?? '')),
+                        'name' => trim((string) $item['name'])
+                    ];
+                }
+            }
+        }
+    }
+
+    if (!$matched['items']) {
+        $productNames = [
+            'course' => 'Trading Mastery Course',
+            'ea' => 'TTR Risk Calculator EA',
+            'indicator' => 'The Holly Grail Indicator',
+            'robot' => 'TTR Robot',
+            'robot_sr' => 'S&R Precision EA',
+            'robot_ib' => 'Instant Breakout EA'
+        ];
+        $itemStmt = $conn->prepare('SELECT product_type FROM order_items WHERE order_id = ? ORDER BY id ASC');
+        if ($itemStmt) {
+            $matchedOrderId = (int) $matched['id'];
+            $itemStmt->bind_param('i', $matchedOrderId);
+            $itemStmt->execute();
+            $itemResult = $itemStmt->get_result();
+            while ($itemRow = $itemResult->fetch_assoc()) {
+                $type = trim((string) $itemRow['product_type']);
+                $matched['items'][] = [
+                    'type' => $type,
+                    'name' => $productNames[$type] ?? 'Trading Product'
+                ];
+            }
+            $itemStmt->close();
+        }
+    }
+
     echo json_encode(['success' => true, 'order' => $matched]);
     $conn->close();
     exit;
