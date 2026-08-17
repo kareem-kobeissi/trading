@@ -4,7 +4,7 @@ include 'header.php';
 require_once 'config.php';
 
 // Get course information
-$course_price = 0;
+$course_price = 200;
 $course_id = 'basics'; // Default course section
 
 // Check if user is logged in and has unlocked access to course
@@ -139,7 +139,7 @@ $totalLessonCount = $foundationLessonCount + $advancedLessonCount + $riskLessonC
                     } elseif ($course_access_status === 'pending') {
                         echo '<span style="color: #f59d00;"><i class="fas fa-clock"></i> PENDING</span>';
                     } else {
-                        echo '<span>FREE</span>';
+                        echo '<span>$200 <small style="font-size:.72em;opacity:.82;">or FREE with Broker Registration</small></span>';
                     }
                     ?>
                 </div>
@@ -162,7 +162,7 @@ $totalLessonCount = $foundationLessonCount + $advancedLessonCount + $riskLessonC
                 <?php elseif ($course_access_status === 'pending'): ?>
                     <button type="button" class="btn-buy-course" disabled style="opacity:.7;cursor:not-allowed;background:#333;color:#f59d00;border:1px solid #f59d00;"><i class="fas fa-clock" aria-hidden="true"></i> Pending Admin Approval</button>
                 <?php else: ?>
-                    <button type="button" class="btn-buy-course" onclick="requestCourseAccess()">Enroll / Request Access</button>
+                    <button type="button" class="btn-buy-course" onclick="requestCourseAccess()">Enroll — $200 or Free with Broker</button>
                 <?php endif; ?>
             </div>
         </div>
@@ -1930,7 +1930,7 @@ $totalLessonCount = $foundationLessonCount + $advancedLessonCount + $riskLessonC
 
 <script>
     // Course price and ID for cart operations
-    const coursePrice = 0;
+    const coursePrice = <?php echo json_encode((float) $course_price); ?>;
     const courseId = '<?php echo $course_id; ?>';
     const userId = '<?php echo isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 'null'; ?>';
 
@@ -2265,7 +2265,7 @@ $totalLessonCount = $foundationLessonCount + $advancedLessonCount + $riskLessonC
         } catch(e) {
             console.error('Request failed:', e);
             if (actionArea) {
-                actionArea.innerHTML = '<button type="button" class="btn-buy-course" onclick="requestCourseAccess()">Enroll / Request Access</button>';
+                actionArea.innerHTML = '<button type="button" class="btn-buy-course" onclick="requestCourseAccess()">Enroll — $200 or Free with Broker</button>';
             }
         }
     }
@@ -2345,7 +2345,7 @@ $totalLessonCount = $foundationLessonCount + $advancedLessonCount + $riskLessonC
 
         if (!isLoggedIn) {
             actionArea.innerHTML = '<a href="login.php?redirect=courses.php" class="btn-buy-course">Login to Enroll</a>';
-            if (badgeStatus) badgeStatus.innerHTML = '<span>FREE</span>';
+            if (badgeStatus) badgeStatus.innerHTML = '<span>$200 <small style="font-size:.72em;opacity:.82;">or FREE with Broker Registration</small></span>';
             return;
         }
 
@@ -2358,8 +2358,8 @@ $totalLessonCount = $foundationLessonCount + $advancedLessonCount + $riskLessonC
             actionArea.innerHTML = '<button type="button" class="btn-buy-course" disabled style="opacity:.7;cursor:not-allowed;background:#333;color:#f59d00;border:1px solid #f59d00;"><i class="fas fa-clock" aria-hidden="true"></i> Pending Admin Approval</button>';
             if (badgeStatus) badgeStatus.innerHTML = '<span style="color: #f59d00;"><i class="fas fa-clock"></i> PENDING</span>';
         } else {
-            actionArea.innerHTML = '<button type="button" class="btn-buy-course" onclick="requestCourseAccess()">Enroll / Request Access</button>';
-            if (badgeStatus) badgeStatus.innerHTML = '<span>FREE</span>';
+            actionArea.innerHTML = '<button type="button" class="btn-buy-course" onclick="requestCourseAccess()">Enroll — $200 or Free with Broker</button>';
+            if (badgeStatus) badgeStatus.innerHTML = '<span>$200 <small style="font-size:.72em;opacity:.82;">or FREE with Broker Registration</small></span>';
         }
     }
 

@@ -65,7 +65,9 @@ if (!$alreadyRecorded) {
     $orderRef = 'REQ-' . strtoupper($productKey) . '-' . $userId . '-' . date('YmdHis');
     $paymentMethod = 'request';
     $status = 'pending';
-    $total = 0.00;
+    // Standard course price. Access may be granted free after the administrator
+    // confirms registration through the official broker partner.
+    $total = 200.00;
 
     $conn->begin_transaction();
     try {
@@ -75,8 +77,8 @@ if (!$alreadyRecorded) {
         $orderId = $conn->insert_id;
         $orderStmt->close();
 
-        $itemStmt = $conn->prepare("INSERT INTO order_items (order_id, course_id, price, product_type, item_status) VALUES (?, ?, 0, ?, 'pending')");
-        $itemStmt->bind_param('iis', $orderId, $product['course_id'], $type);
+        $itemStmt = $conn->prepare("INSERT INTO order_items (order_id, course_id, price, product_type, item_status) VALUES (?, ?, ?, ?, 'pending')");
+        $itemStmt->bind_param('iids', $orderId, $product['course_id'], $total, $type);
         $itemStmt->execute();
         $itemStmt->close();
         $conn->commit();
@@ -97,12 +99,12 @@ if (!$alreadyRecorded) {
                     'phone' => $user['phone']
                 ],
                 'payment_method' => $paymentMethod,
-                'total' => 0,
+                'total' => $total,
                 'currency' => 'USD',
                 'items' => [[
                     'type' => $type,
                     'name' => $productNames[$type],
-                    'price' => 0
+                    'price' => $total
                 ]]
             ],
             'owner' => ['whatsapp' => '+96171493997']

@@ -47,36 +47,26 @@ def verify_signature(body: bytes, timestamp: str, signature: str) -> None:
 
 def fallback_customer_message(order: dict[str, Any]) -> str:
     customer = order["customer"]
-    products = " & ".join(item["name"] for item in order.get("items", []))
+    products = order_product_names(order)
+    amount = order_payment_amount(order)
     return (
         f"Hello {customer['name']},\n\n"
-        f"We received your order {order['reference']} for {products}. "
-        f"The total is {order['total']:.2f} {order.get('currency', 'USD')}.\n\n"
-        "Your order is pending while payment is reviewed. Please reply with your "
-        "payment reference and proof. A team member will verify it manually before "
-        "access is activated.\n\nTHE TRADING ROUTINE"
+        f"We received your order *{order['reference']}* for the *{products}*.\n\n"
+        "Your order is currently pending while we wait for your action. A message "
+        "has been sent to your *WhatsApp* with the available options.\n\n"
+        "Please choose one of the following to continue:\n\n"
+        f"1. *Pay {amount} by Whish Money*\n"
+        "2. *Register through our Broker Partner and receive access for free*\n\n"
+        "Once you choose an option and send the required confirmation, our team "
+        "will review your order and grant access after approval.\n\n"
+        "*The Trading Routine*"
     )
 
 
 def generate_customer_message(order: dict[str, Any]) -> str:
-    if not env("OPENAI_API_KEY"):
-        return fallback_customer_message(order)
-    try:
-        client = OpenAI(api_key=env("OPENAI_API_KEY"))
-        response = client.responses.create(
-            model=env("OPENAI_MODEL", "gpt-5-mini"),
-            instructions=(
-                "Write a concise, professional payment follow-up message for THE TRADING "
-                "ROUTINE. Use the customer's apparent language when confidently inferable; "
-                "otherwise use English. State that approval is manual. Never claim payment "
-                "was received or verified. Ask for the transaction reference and proof."
-            ),
-            input=json.dumps(order, ensure_ascii=False),
-        )
-        return response.output_text.strip() or fallback_customer_message(order)
-    except OpenAIError as error:
-        print(f"OpenAI unavailable; using fallback message ({type(error).__name__}).")
-        return fallback_customer_message(order)
+    # Customer payment choices must remain deterministic. AI is used later for
+    # reply analysis, but never to invent prices, payment details, or offers.
+    return fallback_customer_message(order)
 
 
 def send_email(to_email: str, subject: str, plain_message: str) -> str:
@@ -200,6 +190,31 @@ def order_product_names(order: dict[str, Any]) -> str:
     return " & ".join(names) or "your selected product"
 
 
+def order_payment_amount(order: dict[str, Any]) -> str:
+    try:
+        amount = float(order.get("total") or 0)
+    except (TypeError, ValueError):
+        amount = 0
+    if amount <= 0:
+        item_amounts = []
+        for item in order.get("items", []):
+            if not isinstance(item, dict):
+                continue
+            try:
+                item_amounts.append(float(item.get("price") or 0))
+            except (TypeError, ValueError):
+                continue
+        amount = sum(item_amounts)
+    if amount <= 0 and any(
+        isinstance(item, dict) and str(item.get("type", "")).strip() == "course"
+        for item in order.get("items", [])
+    ):
+        amount = 200
+    currency = str(order.get("currency") or "USD").strip().upper()
+    formatted = f"{amount:,.2f}".rstrip("0").rstrip(".")
+    return f"${formatted} {currency}"
+
+
 def send_whatsapp_order_template(order: dict[str, Any]) -> str:
     template_name = env("WHATSAPP_ORDER_TEMPLATE")
     if not template_name:
@@ -216,7 +231,11 @@ def send_whatsapp_order_template(order: dict[str, Any]) -> str:
                     {"type": "text", "text": str(order["customer"]["name"])},
                     {
                         "type": "text",
-                        "text": f"{order['reference']} for {order_product_names(order)}",
+                        "text": (
+                            f"{order['reference']} for {order_product_names(order)}. "
+                            f"Pay {order_payment_amount(order)} by Whish Money, or register "
+                            "through our broker partner to receive access for free"
+                        ),
                     },
                 ],
             }],
@@ -407,12 +426,14 @@ def process_whatsapp_webhook(payload: dict[str, Any]) -> None:
                     normalized = selection.strip().lower().replace(" ", "_")
                     order_reference = str(order.get("order_ref") or order.get("reference") or "").strip()
                     products = order_product_names(order)
+                    amount = order_payment_amount(order)
                     order_context = f"Order *{order_reference}* for *{products}*.\n\n" if order_reference else ""
                     if "whish" in normalized:
                         response_text = (
                             order_context +
                             "*Whish Money Payment*\n\n"
-                            f"Please send the exact order amount to *{env('WHISH_PAYMENT_NUMBER', '+961 71 493 997')}*.\n\n"
+                            f"Please send the exact order amount of *{amount}* to "
+                            f"*{env('WHISH_PAYMENT_NUMBER', '+961 71 493 997')}*.\n\n"
                             "After payment, reply here with:\n\n"
                             "- The *transaction reference*\n"
                             "- A *clear payment screenshot*\n\n"
@@ -425,6 +446,7 @@ def process_whatsapp_webhook(payload: dict[str, Any]) -> None:
                             "Please register with our broker partner using the link below:\n\n"
                             f"👉 {env('BROKER_SIGNUP_URL', 'https://portal.bbcorp.trade/auth/jwt/sign-up/partner/X2sUYi/prod/KAS663')}\n\n"
                             "Create your account through this link and complete the registration and verification process.\n\n"
+                            "After the broker registration is confirmed, your access will be granted *for free*.\n\n"
                             "Once completed, send us your *trading account login number* for confirmation.\n\n"
                             "*The Trading Routine*"
                         )
@@ -543,8 +565,8 @@ def process_order_event(event: dict[str, Any]) -> None:
     if env("WHATSAPP_ORDER_TEMPLATE") and whatsapp_recipient(customer_phone):
         template_record = (
             f"Hello {order['customer']['name']}, we received order {order['reference']} "
-            f"for {order_product_names(order)}. "
-            "Choose Pay with Whish Money or Sign up with our broker."
+            f"for {order_product_names(order)}. Pay {order_payment_amount(order)} by Whish "
+            "Money, or register through our broker partner to receive access for free."
         )
         try:
             whatsapp_id = send_whatsapp_order_template(order)
