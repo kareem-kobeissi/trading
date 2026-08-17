@@ -108,7 +108,10 @@ include 'header.php';
             }
             setInterval(checkEaApprovalSync, 5000);
 
-            function submitEaRequest(btn) {
+            async function submitEaRequest(btn) {
+                if (window.TTRPhoneVerification && !(await window.TTRPhoneVerification.ensureVerifiedPhone())) {
+                    return;
+                }
                 btn.disabled = true;
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
                 btn.style.opacity = '0.7';

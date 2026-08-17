@@ -560,6 +560,10 @@ include 'header.php';
             checkoutForm.addEventListener('submit', async function (e) {
                 e.preventDefault();
 
+                if (window.TTRPhoneVerification && !(await window.TTRPhoneVerification.ensureVerifiedPhone())) {
+                    return;
+                }
+
                 const name = document.getElementById('name').value.trim();
                 const localPhone = document.getElementById('phone').value.trim();
                 const phoneDigits = localPhone.replace(/\D/g, '').replace(/^0+/, '');

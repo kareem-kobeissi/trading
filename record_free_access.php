@@ -63,6 +63,17 @@ if (!$alreadyRecorded) {
         exit;
     }
 
+    if (trim((string) ($user['phone'] ?? '')) === '') {
+        header('Content-Type: application/json');
+        http_response_code(409);
+        echo json_encode([
+            'success' => false,
+            'code' => 'phone_verification_required',
+            'message' => 'Verify your WhatsApp number before creating an order'
+        ]);
+        exit;
+    }
+
     $orderRef = 'REQ-' . strtoupper($productKey) . '-' . $userId . '-' . date('YmdHis');
     $paymentMethod = 'request';
     $status = 'pending';

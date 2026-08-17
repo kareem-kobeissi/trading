@@ -45,7 +45,6 @@
                         <a href="courses.php" data-i18n="footerCourses"><span class="nav-dot"></span><span data-i18n="footerCourses">Courses</span></a>
                         <a href="broker.php">Broker</span></a>
                         <a href="ea.php">EAs</span></a>
-                        <a href="cart.php" data-i18n="footerCart"><span class="nav-dot"></span><span data-i18n="footerCart">Cart</span></a>
                         <a href="contact.php">Contact</span></a>
                         <a href="about.php" data-i18n="footerAbout"><span class="nav-dot"></span><span data-i18n="footerAbout">About</span></a>
                     </div>
@@ -104,6 +103,12 @@
         <div class="footer-copy-row">
             <div class="footer-left">
                 <p class="copyright-text">&copy; 2026 THE TRΛDING ROUTINE. All rights reserved.</p>
+                <p class="footer-legal-name">THE TRADING ROUTINE is operated by HUSSEIN SHEIKH ALI.</p>
+                <nav class="footer-legal-links" aria-label="Legal links">
+                    <a href="privacy-policy.php">Privacy Policy</a>
+                    <span aria-hidden="true">&bull;</span>
+                    <a href="data-deletion.php">Data Deletion</a>
+                </nav>
             </div>
 
         </div>
@@ -369,6 +374,23 @@
     .footer-copy-row { padding: 10px 0; justify-content: center; text-align: center; }
     .footer-left { flex: 0 1 auto; width: 100%; text-align: center; }
     .copyright-text { margin: 0; }
+    .footer-legal-name {
+        margin: 0.25rem 0 0;
+        color: rgba(255, 255, 255, 0.72);
+        font-size: 0.78rem;
+        line-height: 1.4;
+        text-align: center;
+    }
+    .footer-legal-links {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 0.55rem;
+        margin-top: 0.35rem;
+        font-size: 0.78rem;
+    }
+    .footer-legal-links a { color: rgba(255, 255, 255, 0.78); text-decoration: none; }
+    .footer-legal-links a:hover { color: #5ee5ff; text-decoration: underline; }
 
     @media (max-width: 768px) {
         .simple-footer { margin-top: 32px; padding: 0 1rem 10px; }
@@ -452,6 +474,33 @@
     }
 </script>
 
+<?php if (isset($_SESSION['user_id'])): ?>
+<div class="phone-verification-modal" id="phoneVerificationModal" hidden>
+    <div class="phone-verification-card" role="dialog" aria-modal="true" aria-labelledby="phoneVerificationTitle">
+        <button type="button" class="phone-verification-close" id="phoneVerificationClose" aria-label="Close">&times;</button>
+        <div class="phone-verification-icon"><i class="fab fa-whatsapp" aria-hidden="true"></i></div>
+        <h2 id="phoneVerificationTitle">Verify your WhatsApp number</h2>
+        <p>We need a verified WhatsApp number before creating your pending order.</p>
+        <div id="phoneVerificationPhoneStep">
+            <label for="phoneVerificationPhone">WhatsApp number</label>
+            <input type="tel" id="phoneVerificationPhone" autocomplete="tel" placeholder="Your phone number">
+            <button type="button" class="phone-verification-primary" id="phoneVerificationSend">Send verification code</button>
+        </div>
+        <div id="phoneVerificationCodeStep" hidden>
+            <label for="phoneVerificationCode">Six-digit code</label>
+            <input type="text" inputmode="numeric" maxlength="6" id="phoneVerificationCode" autocomplete="one-time-code" placeholder="000000">
+            <button type="button" class="phone-verification-primary" id="phoneVerificationVerify">Verify and continue</button>
+            <button type="button" class="phone-verification-secondary" id="phoneVerificationBack">Change number</button>
+        </div>
+        <p class="phone-verification-message" id="phoneVerificationMessage" aria-live="polite"></p>
+    </div>
+</div>
+<style>
+.phone-verification-modal[hidden]{display:none}.phone-verification-modal{position:fixed;inset:0;z-index:100000;display:grid;place-items:center;padding:1rem;background:rgba(3,8,24,.82);backdrop-filter:blur(8px)}.phone-verification-card{position:relative;width:min(440px,100%);padding:2rem;border:1px solid rgba(47,216,255,.35);border-radius:22px;background:linear-gradient(145deg,#0d1a38,#09142c);box-shadow:0 24px 70px rgba(0,0,0,.5);color:#eaf6ff}.phone-verification-card h2{margin:.55rem 0;text-align:center;color:#fff}.phone-verification-card>p{text-align:center;color:#9fb1ca;line-height:1.55}.phone-verification-icon{margin:auto;width:58px;height:58px;display:grid;place-items:center;border-radius:18px;background:rgba(37,211,102,.14);color:#46e68a;font-size:2rem}.phone-verification-close{position:absolute;right:.8rem;top:.65rem;border:0;background:transparent;color:#aac0d8;font-size:1.8rem;cursor:pointer}.phone-verification-card label{display:block;margin:1rem 0 .45rem;color:#cfe9f6;font-weight:700}.phone-verification-card input{width:100%;box-sizing:border-box;padding:.9rem 1rem;border:1px solid #28496a;border-radius:12px;background:#071126;color:#fff;font-size:1rem}.phone-verification-card .iti{width:100%}.phone-verification-primary,.phone-verification-secondary{width:100%;margin-top:1rem;padding:.9rem 1rem;border-radius:12px;font-weight:800;cursor:pointer}.phone-verification-primary{border:0;background:linear-gradient(135deg,#20d5f5,#39df96);color:#061326}.phone-verification-secondary{border:1px solid #315575;background:transparent;color:#b9d4e8}.phone-verification-message{min-height:1.4em;margin:.8rem 0 0!important;font-size:.9rem}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/intl-tel-input@29.1.0/dist/js/intlTelInput.min.js"></script>
+<script src="phone_verification.js?v=<?php echo file_exists(__DIR__ . '/phone_verification.js') ? filemtime(__DIR__ . '/phone_verification.js') : time(); ?>"></script>
+<?php endif; ?>
 <script src="main.js?v=<?php echo file_exists(__DIR__ . '/main.js') ? filemtime(__DIR__ . '/main.js') : time(); ?>"></script>
 </body>
 

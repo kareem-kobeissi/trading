@@ -54,12 +54,26 @@ if (!$order_ref || !$name || !$email || $total_price < 0 || empty($items)) {
 // ===== GET USER ID =====
 $emailEscaped = $conn->real_escape_string($email);
 
-$userResult = $conn->query("SELECT id FROM users WHERE email = '$emailEscaped' LIMIT 1");
+$userResult = $conn->query("SELECT id, phone FROM users WHERE email = '$emailEscaped' LIMIT 1");
 
 $user_id = 0;
 
 if ($userResult && $userResult->num_rows > 0) {
-    $user_id = $userResult->fetch_assoc()['id'];
+    $userRow = $userResult->fetch_assoc();
+    $user_id = (int) $userRow['id'];
+    $savedPhone = trim((string) ($userRow['phone'] ?? ''));
+    if ($savedPhone === '') {
+        http_response_code(409);
+        echo json_encode([
+            'success' => false,
+            'code' => 'phone_verification_required',
+            'message' => 'Verify your WhatsApp number before creating an order'
+        ]);
+        exit();
+    }
+    // The verified database value is authoritative; never trust a client-side
+    // phone override when creating the order or automation payload.
+    $phone = $conn->real_escape_string($savedPhone);
 }
 
 // ===== INSERT ORDER =====

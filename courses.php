@@ -2286,6 +2286,9 @@ $totalLessonCount = $foundationLessonCount + $advancedLessonCount + $riskLessonC
             window.location.href = 'login.php?redirect=courses.php';
             return;
         }
+        if (window.TTRPhoneVerification && !(await window.TTRPhoneVerification.ensureVerifiedPhone())) {
+            return;
+        }
         const actionArea = document.getElementById('courseActionArea');
         if (actionArea) {
             actionArea.innerHTML = '<button type="button" class="btn-buy-course" disabled style="opacity:.6;cursor:not-allowed;background:#444;"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Submitting Request...</button>';

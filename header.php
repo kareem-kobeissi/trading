@@ -18,60 +18,15 @@ $username = $isLoggedIn ? $_SESSION['username'] : '';
     <title>THE TRΛDING ROUTINE</title>
     <link rel="icon" type="image/png" href="hsenn.jpeg">
     <link rel="stylesheet" href="styles.css?v=<?php echo file_exists(__DIR__ . '/styles.css') ? filemtime(__DIR__ . '/styles.css') : time(); ?>">
+    <?php if ($isLoggedIn): ?>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@29.1.0/dist/css/intlTelInput.css">
+    <?php endif; ?>
     <!-- Font Awesome for Hamburger Icon and Social -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- Translations -->
     <script src="translations.js"></script>
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        /* Page Loading Animation */
-        .page-loader {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, #0a0e27 0%, #1a2d5f 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            transition: opacity 0.5s ease, visibility 0.5s ease;
-        }
-
-        .page-loader.hidden {
-            opacity: 0;
-            visibility: hidden;
-        }
-
-        .loader-content {
-            text-align: center;
-        }
-
-        .loader-spinner {
-            width: 60px;
-            height: 60px;
-            border: 4px solid rgba(0, 212, 255, 0.2);
-            border-top-color: #00d4ff;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 1.5rem;
-        }
-
-        .loader-text {
-            color: #00d4ff;
-            font-size: 1.2rem;
-            font-weight: 600;
-            animation: pulse 1.5s infinite ease-in-out;
-        }
-
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-    </style>
 </head>
 
 <body>
@@ -81,21 +36,6 @@ $username = $isLoggedIn ? $_SESSION['username'] : '';
         window.confirm = function() { return true; };
         window.prompt = function() { return null; };
     </script>
-    <!-- Page Loader -->
-    <div class="page-loader" id="pageLoader">
-        <div class="loader-content">
-            <div class="loader-spinner"></div>
-            <div class="loader-text">Loading...</div>
-        </div>
-    </div>
-    <script>
-        window.addEventListener('load', function() {
-            setTimeout(function() {
-                document.getElementById('pageLoader').classList.add('hidden');
-            }, 300);
-        });
-    </script>
-
     <header class="main-header">
         <nav class="navbar">
             <div class="nav-brand">
@@ -118,7 +58,6 @@ $username = $isLoggedIn ? $_SESSION['username'] : '';
                 <li><a href="broker.php" data-i18n="broker">Broker</a></li>
                 <li><a href="ea.php">EAs</a></li>
                 <li><a href="indicators.php">Indicators</a></li>
-                <li><a href="cart.php" data-i18n="cart">Cart</a></li>
                 <li><a href="contact.php" data-i18n="contact">Contact</a></li>
                 
                 <li><a href="about.php" data-i18n="about">About</a></li>
@@ -149,7 +88,7 @@ const userLogged = !!sessionStorage.getItem('currentEmail');
                     // Add appropriate items based on login status
                     if (adminLogged) {
                         navLinks.insertAdjacentHTML('beforeend', `
-                            <li class="mobile-only"><a href="admin_dashboard.php" data-i18n="adminPanel">📊 Admin Panel</a></li>
+                            <li class="mobile-only"><a href="admin_dashboard.php"><i class="fas fa-chart-line" aria-hidden="true"></i> <span data-i18n="adminPanel">Admin Panel</span></a></li>
                         `);
                     } else if (userLogged) {
                         navLinks.insertAdjacentHTML('beforeend', `
@@ -195,7 +134,7 @@ endif; ?>
                     if (adminLogged) {
                         console.log('Displaying Admin Panel button');
                         authButtonsContainer.innerHTML = `
-                            <a href="admin_dashboard.php" class="btn btn-secondary glass-btn" data-i18n="adminPanel">📊 Admin Panel</a>
+                            <a href="admin_dashboard.php" class="btn btn-secondary glass-btn"><i class="fas fa-chart-line" aria-hidden="true"></i> <span data-i18n="adminPanel">Admin Panel</span></a>
                         `;
                     } else if (userLogged) {
                         console.log('Displaying User Profile button');

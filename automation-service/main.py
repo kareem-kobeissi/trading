@@ -45,6 +45,17 @@ def verify_signature(body: bytes, timestamp: str, signature: str) -> None:
         raise HTTPException(status_code=401, detail="Invalid webhook signature")
 
 
+def verify_phone_otp_signature(body: bytes, timestamp: str, signature: str) -> None:
+    secret = env("TTR_PHONE_OTP_SECRET")
+    if not secret or not timestamp.isdigit() or abs(time.time() - int(timestamp)) > 300:
+        raise HTTPException(status_code=401, detail="Invalid phone verification credentials")
+    expected = "sha256=" + hmac.new(
+        secret.encode(), timestamp.encode() + b"." + body, hashlib.sha256
+    ).hexdigest()
+    if not hmac.compare_digest(expected, signature):
+        raise HTTPException(status_code=401, detail="Invalid phone verification signature")
+
+
 def fallback_customer_message(order: dict[str, Any]) -> str:
     customer = order["customer"]
     products = order_product_names(order)
@@ -177,6 +188,30 @@ def send_whatsapp_image(recipient: str, image_url: str, caption: str = "") -> st
         "to": whatsapp_recipient(recipient),
         "type": "image",
         "image": image,
+    })
+    return whatsapp_message_id(response)
+
+
+def send_whatsapp_otp(recipient: str, code: str) -> str:
+    response = whatsapp_graph_post({
+        "to": whatsapp_recipient(recipient),
+        "type": "template",
+        "template": {
+            "name": env("WHATSAPP_OTP_TEMPLATE", "ttr_phone_verification"),
+            "language": {"code": env("WHATSAPP_OTP_LANGUAGE", "en")},
+            "components": [
+                {
+                    "type": "body",
+                    "parameters": [{"type": "text", "text": code}],
+                },
+                {
+                    "type": "button",
+                    "sub_type": "url",
+                    "index": "0",
+                    "parameters": [{"type": "text", "text": code}],
+                },
+            ],
+        },
     })
     return whatsapp_message_id(response)
 
@@ -489,6 +524,23 @@ async def pending_order(
 
     background_tasks.add_task(process_order_event, event)
     return {"accepted": True, "event_id": event.get("event_id")}
+
+
+@app.post("/phone-verification/send")
+async def send_phone_verification_code(
+    request: Request,
+    x_ttr_phone_timestamp: str = Header(default=""),
+    x_ttr_phone_signature: str = Header(default=""),
+) -> dict[str, Any]:
+    body = await request.body()
+    verify_phone_otp_signature(body, x_ttr_phone_timestamp, x_ttr_phone_signature)
+    payload = json.loads(body)
+    phone = str(payload.get("phone", ""))
+    code = str(payload.get("code", ""))
+    if not re.fullmatch(r"\+?\d{8,15}", phone) or not re.fullmatch(r"\d{6}", code):
+        raise HTTPException(status_code=422, detail="Invalid phone verification payload")
+    message_id = send_whatsapp_otp(phone, code)
+    return {"success": True, "message_id": message_id}
 
 
 def process_order_event(event: dict[str, Any]) -> None:
