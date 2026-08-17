@@ -39,6 +39,10 @@ HTML;
 
 function brandedPlainTextEmail($title, $plainMessage, $preheader = '')
 {
-    $body = nl2br(htmlspecialchars((string) $plainMessage, ENT_QUOTES, 'UTF-8'));
+    $body = htmlspecialchars((string) $plainMessage, ENT_QUOTES, 'UTF-8');
+    // Render the limited WhatsApp-style emphasis used by controlled notification
+    // templates after escaping all dynamic customer and order information.
+    $body = preg_replace('/\*([^*\r\n]+)\*/u', '<strong style="color:#ffffff">$1</strong>', $body);
+    $body = nl2br($body);
     return brandedEmailTemplate($title, $body, $preheader);
 }

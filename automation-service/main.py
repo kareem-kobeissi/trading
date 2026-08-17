@@ -55,11 +55,11 @@ def fallback_customer_message(order: dict[str, Any]) -> str:
         "Your order is currently pending while we wait for your action. A message "
         "has been sent to your *WhatsApp* with the available options.\n\n"
         "Please choose one of the following to continue:\n\n"
-        f"1. *Pay {amount} by Whish Money*\n"
-        "2. *Register through our Broker Partner and receive access for free*\n\n"
-        "Once you choose an option and send the required confirmation, our team "
-        "will review your order and grant access after approval.\n\n"
-        "*The Trading Routine*"
+        f"1\ufe0f\u20e3 *Pay by Whish Money \u2014 {amount}*\n"
+        "2\ufe0f\u20e3 *Join through our Broker Partner \u2014 free access after confirmed registration*\n\n"
+        "Once you choose an option and send the required confirmation, our team will "
+        "review and approve your order, then grant you access to your purchase.\n\n"
+        "*THE TRADING ROUTINE*"
     )
 
 
