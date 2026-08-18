@@ -103,12 +103,29 @@ $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
 $curlError = curl_error($ch);
 curl_close($ch);
 if ($response === false || $status < 200 || $status >= 300) {
-    error_log('WhatsApp OTP delivery failed: HTTP ' . $status . ' ' . $curlError);
+    $serviceMessage = '';
+    if (is_string($response) && $response !== '') {
+        $decodedResponse = json_decode($response, true);
+        if (is_array($decodedResponse)) {
+            $serviceMessage = (string) ($decodedResponse['detail'] ?? $decodedResponse['message'] ?? '');
+        }
+    }
+    error_log(
+        'WhatsApp OTP delivery failed: HTTP ' . $status
+        . ($curlError !== '' ? ' cURL=' . $curlError : '')
+        . ($serviceMessage !== '' ? ' service=' . substr($serviceMessage, 0, 300) : '')
+    );
+    $diagnostic = $status === 401
+        ? 'otp_secret_mismatch'
+        : ($status === 0 ? 'automation_service_unreachable' : 'whatsapp_delivery_failed');
     http_response_code(502);
-    echo json_encode(['success' => false, 'message' => 'The verification code could not be sent. Please try again']);
+    echo json_encode([
+        'success' => false,
+        'message' => 'The verification code could not be sent. Please try again',
+        'diagnostic' => $diagnostic
+    ]);
     exit;
 }
 
 echo json_encode(['success' => true, 'message' => 'Verification code sent on WhatsApp', 'expires_in' => 600]);
 $conn->close();
-

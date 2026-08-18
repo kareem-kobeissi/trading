@@ -1971,6 +1971,7 @@ $totalLessonCount = $foundationLessonCount + $advancedLessonCount + $riskLessonC
     const courseActionLabel = `Enroll — $${coursePrice.toFixed(0)} or Free with Broker`;
     const courseId = '<?php echo $course_id; ?>';
     const userId = '<?php echo isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 'null'; ?>';
+    const isLoggedIn = Boolean(userId && userId !== 'null');
 
     // Toggle PDF Menu
     function togglePdfMenu() {
@@ -2313,7 +2314,6 @@ $totalLessonCount = $foundationLessonCount + $advancedLessonCount + $riskLessonC
 
     // Update access status when section changes
     async function updateAccessStatus() {
-        const isLoggedIn = !!userId && userId !== 'null';
         hasAccess = await checkCourseAccess(currentSection);
         const overlay = document.querySelector('.video-locked-overlay');
         if (overlay) {
@@ -2381,8 +2381,6 @@ $totalLessonCount = $foundationLessonCount + $advancedLessonCount + $riskLessonC
         const actionArea = document.getElementById('courseActionArea');
         const badgeStatus = document.getElementById('courseBadgeStatus');
         if (!actionArea) return;
-
-        const isLoggedIn = !!userId && userId !== 'null';
 
         if (!isLoggedIn) {
             actionArea.innerHTML = '<a href="login.php?redirect=courses.php" class="btn-buy-course">Login to Enroll</a>';

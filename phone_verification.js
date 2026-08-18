@@ -28,8 +28,7 @@
         if (!phoneInput && window.intlTelInput) {
             phoneInput = window.intlTelInput(byId('phoneVerificationPhone'), {
                 initialCountry: 'lb',
-                separateDialCode: true,
-                preferredCountries: ['lb', 'ae', 'sa', 'qa', 'kw', 'gb', 'us'],
+                separateDialCode: true
             });
         }
         return new Promise((resolve) => { pendingResolver = resolve; });
@@ -135,4 +134,3 @@
 
     window.TTRPhoneVerification = {ensureVerifiedPhone, refresh: checkStatus};
 })();
-

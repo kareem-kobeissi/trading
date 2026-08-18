@@ -539,7 +539,20 @@ async def send_phone_verification_code(
     code = str(payload.get("code", ""))
     if not re.fullmatch(r"\+?\d{8,15}", phone) or not re.fullmatch(r"\d{6}", code):
         raise HTTPException(status_code=422, detail="Invalid phone verification payload")
-    message_id = send_whatsapp_otp(phone, code)
+    try:
+        message_id = send_whatsapp_otp(phone, code)
+    except httpx.HTTPStatusError as error:
+        status = error.response.status_code
+        try:
+            meta_error = error.response.json().get("error", {})
+            detail = str(meta_error.get("message") or "WhatsApp rejected the verification message")
+        except (ValueError, AttributeError):
+            detail = "WhatsApp rejected the verification message"
+        print(f"WhatsApp OTP rejected: HTTP {status}: {detail}")
+        raise HTTPException(status_code=502, detail=detail) from error
+    except (httpx.HTTPError, RuntimeError) as error:
+        print(f"WhatsApp OTP delivery error: {type(error).__name__}: {error}")
+        raise HTTPException(status_code=502, detail="WhatsApp OTP delivery failed") from error
     return {"success": True, "message_id": message_id}
 
 
