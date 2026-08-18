@@ -60,14 +60,16 @@ def fallback_customer_message(order: dict[str, Any]) -> str:
     customer = order["customer"]
     products = order_product_names(order)
     amount = order_payment_amount(order)
+    options = f"1️⃣ *Pay by Whish Money — {amount}*"
+    if order_allows_broker_access(order):
+        options += "\n2️⃣ *Join through our Broker Partner — free access after confirmed registration*"
     return (
         f"Hello {customer['name']},\n\n"
         f"We received your order *{order['reference']}* for the *{products}*.\n\n"
         "Your order is currently pending while we wait for your action. A message "
         "has been sent to your *WhatsApp* with the available options.\n\n"
         "Please choose one of the following to continue:\n\n"
-        f"1\ufe0f\u20e3 *Pay by Whish Money \u2014 {amount}*\n"
-        "2\ufe0f\u20e3 *Join through our Broker Partner \u2014 free access after confirmed registration*\n\n"
+        f"{options}\n\n"
         "Once you choose an option and send the required confirmation, our team will "
         "review and approve your order, then grant you access to your purchase.\n\n"
         "*THE TRADING ROUTINE*"
@@ -225,6 +227,15 @@ def order_product_names(order: dict[str, Any]) -> str:
     return " & ".join(names) or "your selected product"
 
 
+def order_allows_broker_access(order: dict[str, Any]) -> bool:
+    product_types = {
+        str(item.get("type", "")).strip().lower()
+        for item in order.get("items", [])
+        if isinstance(item, dict)
+    }
+    return bool(product_types) and product_types.issubset({"course", "ea"})
+
+
 def order_payment_amount(order: dict[str, Any]) -> str:
     try:
         amount = float(order.get("total") or 0)
@@ -263,8 +274,12 @@ def send_whatsapp_order_template(order: dict[str, Any]) -> str:
                         "type": "text",
                         "text": (
                             f"{order['reference']} for {order_product_names(order)}. "
-                            f"Pay {order_payment_amount(order)} by Whish Money, or register "
-                            "through our broker partner to receive access for free"
+                            + (
+                                f"Pay {order_payment_amount(order)} by Whish Money, or register "
+                                "through our broker partner to receive access for free"
+                                if order_allows_broker_access(order)
+                                else f"Monthly fee: {order_payment_amount(order)}. Pay by Whish Money to continue"
+                            )
                         ),
                     },
                 ],
@@ -469,7 +484,7 @@ def process_whatsapp_webhook(payload: dict[str, Any]) -> None:
                             "- A *clear payment screenshot*\n\n"
                             "Your payment will be reviewed manually, and access will be activated once confirmed."
                         )
-                    elif "broker" in normalized:
+                    elif "broker" in normalized and order_allows_broker_access(order):
                         response_text = (
                             order_context +
                             "Hello 👋\n\n"
@@ -479,6 +494,13 @@ def process_whatsapp_webhook(payload: dict[str, Any]) -> None:
                             "After the broker registration is confirmed, your access will be granted *for free*.\n\n"
                             "Once completed, send us your *trading account login number* for confirmation.\n\n"
                             "*The Trading Routine*"
+                        )
+                    elif "broker" in normalized:
+                        response_text = (
+                            order_context
+                            + f"This product requires the monthly fee of *{amount}*. "
+                            "The broker-registration option is not available for this subscription. "
+                            "Please choose *Whish Money* to continue."
                         )
                     else:
                         response_text = (
