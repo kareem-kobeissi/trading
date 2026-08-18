@@ -60,7 +60,8 @@ def fallback_customer_message(order: dict[str, Any]) -> str:
     customer = order["customer"]
     products = order_product_names(order)
     amount = order_payment_amount(order)
-    options = f"1️⃣ *Pay by Whish Money — {amount}*"
+    payment_label = "Pay the monthly fee by Whish Money" if order_is_monthly_subscription(order) else "Pay by Whish Money"
+    options = f"1️⃣ *{payment_label} — {amount}*"
     if order_allows_broker_access(order):
         options += "\n2️⃣ *Join through our Broker Partner — free access after confirmed registration*"
     return (
@@ -236,6 +237,13 @@ def order_allows_broker_access(order: dict[str, Any]) -> bool:
     return bool(product_types) and product_types.issubset({"course", "ea"})
 
 
+def order_is_monthly_subscription(order: dict[str, Any]) -> bool:
+    return any(
+        isinstance(item, dict) and str(item.get("type", "")).strip().lower() == "indicator"
+        for item in order.get("items", [])
+    )
+
+
 def order_payment_amount(order: dict[str, Any]) -> str:
     try:
         amount = float(order.get("total") or 0)
@@ -278,7 +286,11 @@ def send_whatsapp_order_template(order: dict[str, Any]) -> str:
                                 f"Pay {order_payment_amount(order)} by Whish Money, or register "
                                 "through our broker partner to receive access for free"
                                 if order_allows_broker_access(order)
-                                else f"Monthly fee: {order_payment_amount(order)}. Pay by Whish Money to continue"
+                                else (
+                                    f"Monthly fee: {order_payment_amount(order)}. Pay by Whish Money to continue"
+                                    if order_is_monthly_subscription(order)
+                                    else f"Price: {order_payment_amount(order)}. Pay by Whish Money to continue"
+                                )
                             )
                         ),
                     },
@@ -496,10 +508,11 @@ def process_whatsapp_webhook(payload: dict[str, Any]) -> None:
                             "*The Trading Routine*"
                         )
                     elif "broker" in normalized:
+                        payment_description = "monthly fee" if order_is_monthly_subscription(order) else "product payment"
                         response_text = (
                             order_context
-                            + f"This product requires the monthly fee of *{amount}*. "
-                            "The broker-registration option is not available for this subscription. "
+                            + f"This product requires a {payment_description} of *{amount}*. "
+                            "The broker-registration option is not available for this product. "
                             "Please choose *Whish Money* to continue."
                         )
                     else:
