@@ -64,6 +64,7 @@ def fallback_customer_message(order: dict[str, Any]) -> str:
     options = f"1️⃣ *{payment_label} — {amount}*"
     if order_allows_broker_access(order):
         options += "\n2️⃣ *Join through our Broker Partner — free access after confirmed registration*"
+    options += "\n3️⃣ *Talk to the Team*"
     return (
         f"Hello {customer['name']},\n\n"
         f"We received your order *{order['reference']}* for the *{products}*.\n\n"
@@ -301,6 +302,48 @@ def send_whatsapp_order_template(order: dict[str, Any]) -> str:
     return whatsapp_message_id(response)
 
 
+def send_owner_selection_notification(order: dict[str, Any], selected_option: str) -> str:
+    owner_phone = whatsapp_recipient(env("OWNER_WHATSAPP", "+96171493997"))
+    if not owner_phone:
+        return ""
+
+    customer = order.get("customer") or {}
+    reference = str(order.get("order_ref") or order.get("reference") or "").strip()
+    template_name = env("WHATSAPP_OWNER_SELECTION_TEMPLATE")
+    if not template_name:
+        details = (
+            "*Customer option selected*\n\n"
+            f"Customer: {customer.get('name', 'Not provided')}\n"
+            f"Email: {customer.get('email', 'Not provided')}\n"
+            f"Phone: {customer.get('phone', 'Not provided')}\n"
+            f"Order: {reference or 'Not provided'}\n"
+            f"Product: {order_product_names(order)}\n"
+            f"Selected option: *{selected_option}*"
+        )
+        return send_whatsapp_text(owner_phone, details)
+
+    response = whatsapp_graph_post({
+        "to": owner_phone,
+        "type": "template",
+        "template": {
+            "name": template_name,
+            "language": {"code": env("WHATSAPP_OWNER_TEMPLATE_LANGUAGE", "en_US")},
+            "components": [{
+                "type": "body",
+                "parameters": [
+                    {"type": "text", "text": str(customer.get("name") or "Not provided")},
+                    {"type": "text", "text": str(customer.get("email") or "Not provided")},
+                    {"type": "text", "text": str(customer.get("phone") or "Not provided")},
+                    {"type": "text", "text": reference or "Not provided"},
+                    {"type": "text", "text": order_product_names(order)},
+                    {"type": "text", "text": selected_option},
+                ],
+            }],
+        },
+    })
+    return whatsapp_message_id(response)
+
+
 def lookup_order_by_phone(phone: str) -> dict[str, Any]:
     result = post_callback({"event": "customer.lookup_by_phone", "phone": phone})
     order = result.get("order")
@@ -485,7 +528,9 @@ def process_whatsapp_webhook(payload: dict[str, Any]) -> None:
                     products = order_product_names(order)
                     amount = order_payment_amount(order)
                     order_context = f"Order *{order_reference}* for *{products}*.\n\n" if order_reference else ""
+                    selected_option = ""
                     if "whish" in normalized:
+                        selected_option = "Whish Money"
                         response_text = (
                             order_context +
                             "*Whish Money Payment*\n\n"
@@ -497,6 +542,7 @@ def process_whatsapp_webhook(payload: dict[str, Any]) -> None:
                             "Your payment will be reviewed manually, and access will be activated once confirmed."
                         )
                     elif "broker" in normalized and order_allows_broker_access(order):
+                        selected_option = "Broker Registration"
                         response_text = (
                             order_context +
                             "Hello 👋\n\n"
@@ -508,6 +554,7 @@ def process_whatsapp_webhook(payload: dict[str, Any]) -> None:
                             "*The Trading Routine*"
                         )
                     elif "broker" in normalized:
+                        selected_option = "Broker Registration"
                         payment_description = "monthly fee" if order_is_monthly_subscription(order) else "product payment"
                         response_text = (
                             order_context
@@ -515,10 +562,17 @@ def process_whatsapp_webhook(payload: dict[str, Any]) -> None:
                             "The broker-registration option is not available for this product. "
                             "Please choose *Whish Money* to continue."
                         )
+                    elif any(keyword in normalized for keyword in ("team", "support", "contact", "help")):
+                        selected_option = "Talk to the Team"
+                        response_text = (
+                            order_context
+                            + "Thank you. Your request has been sent to *The Trading Routine* team. "
+                            "A team member will contact you soon."
+                        )
                     else:
                         response_text = (
                             "Please choose one of the options in the order message: "
-                            "Pay with Whish Money or Sign up with our broker."
+                            "Pay with Whish Money, Sign up with our broker, or Talk to the Team."
                         )
 
                     outgoing_id = send_whatsapp_text(customer_phone, response_text)
@@ -526,6 +580,21 @@ def process_whatsapp_webhook(payload: dict[str, Any]) -> None:
                         order_id, "message.sent", business_number, customer_phone,
                         response_text, outgoing_id
                     )
+                    if selected_option:
+                        try:
+                            owner_message_id = send_owner_selection_notification(order, selected_option)
+                            if owner_message_id:
+                                record_whatsapp_message(
+                                    order_id, "message.sent", business_number,
+                                    env("OWNER_WHATSAPP", "+96171493997"),
+                                    f"Customer selected {selected_option} for order {order_reference or order_id}.",
+                                    owner_message_id
+                                )
+                        except (httpx.HTTPError, OSError, RuntimeError, ValueError) as error:
+                            print(
+                                "Owner WhatsApp notification failed "
+                                f"({type(error).__name__}): {error}"
+                            )
                     if "whish" in normalized:
                         qr_url = env(
                             "WHISH_QR_IMAGE_URL",
@@ -661,7 +730,7 @@ def process_order_event(event: dict[str, Any]) -> None:
         template_record = (
             f"Hello {order['customer']['name']}, we received order {order['reference']} "
             f"for {order_product_names(order)}. Pay {order_payment_amount(order)} by Whish "
-            "Money, or register through our broker partner to receive access for free."
+            "Money, register through our broker partner when eligible, or talk to the team."
         )
         try:
             whatsapp_id = send_whatsapp_order_template(order)
