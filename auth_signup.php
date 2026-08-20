@@ -5,14 +5,31 @@ ob_start();
 // Set JSON header first
 header('Content-Type: application/json; charset=utf-8');
 
+register_shutdown_function(function () {
+    $error = error_get_last();
+    $fatalTypes = [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR];
+    if (!$error || !in_array($error['type'], $fatalTypes, true)) return;
+    if (!headers_sent()) {
+        http_response_code(500);
+        header('Content-Type: application/json; charset=utf-8');
+    }
+    while (ob_get_level() > 0) ob_end_clean();
+    error_log('Signup fatal error: ' . $error['message'] . ' in ' . $error['file'] . ':' . $error['line']);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Signup server configuration error',
+        'diagnostic' => basename($error['file']) . ':' . $error['line']
+    ]);
+});
+  
 // Disable error display
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 
 // Get config
 try {
-    require_once 'config.php';
-} catch (Exception $e) {
+    require_once __DIR__ . '/config.php';
+} catch (Throwable $e) {
     ob_end_clean();
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'Database error']);
@@ -82,11 +99,16 @@ try {
 
         // Send email with verification code
         $emailSent = false;
+        $deliveryDiagnostic = 'unknown';
         try {
-            require_once 'api/mail-config.php';
+            require_once __DIR__ . '/api/mail-config.php';
 
-            // Remove spaces from password if any
-            $cleanPassword = str_replace(' ', '', GMAIL_PASSWORD);
+            $smtpPassword = GMAIL_PASSWORD;
+            $smtpCaFile = getenv('SMTP_CA_FILE') ?: '';
+            $smtpVerifyTlsValue = strtolower(trim((string) (getenv('SMTP_VERIFY_TLS') ?: 'true')));
+            $smtpVerifyTls = !in_array($smtpVerifyTlsValue, ['0', 'false', 'no', 'off'], true);
+            $smtpDebugValue = strtolower(trim((string) (getenv('SMTP_DEBUG') ?: 'false')));
+            $smtpDebug = in_array($smtpDebugValue, ['1', 'true', 'yes', 'on'], true);
 
             $subject = "Your Verification Code - The Trading Routine";
             $htmlMessage = "
@@ -125,27 +147,75 @@ try {
             </html>";
 
             $plainTextMessage = "Your verification code is: " . $code . "\n\nThis code will expire in 15 minutes.\n\nIf you did not request this code, please ignore this email.";
+            require_once __DIR__ . '/email_template.php';
+            $safeCode = htmlspecialchars($code, ENT_QUOTES, 'UTF-8');
+            $verificationBody = "
+                <p style='margin:0 0 16px'>Hello,</p>
+                <p style='margin:0 0 20px'>Use the verification code below to complete your Trading Routine registration.</p>
+                <div style='margin:24px 0;padding:20px;text-align:center;background:#081329;border:1px solid #27d7f5;border-radius:12px'>
+                    <div style='color:#64e7ff;font-size:34px;font-weight:800;letter-spacing:7px;font-family:Courier New,monospace'>{$safeCode}</div>
+                </div>
+                <p style='margin:0 0 12px'>This code expires in <strong style='color:#ffffff'>15 minutes</strong>.</p>
+                <p style='margin:0;color:#8fa3bf;font-size:13px'>If you did not request this code, you can safely ignore this email. Never share your verification code.</p>";
+            $htmlMessage = brandedEmailTemplate(
+                'Verify Your Email',
+                $verificationBody,
+                'Your Trading Routine verification code is ' . $code
+            );
 
             if (defined('USE_GMAIL_SMTP') && USE_GMAIL_SMTP) {
                 // Send via Gmail SMTP
-                if (file_exists('libs/GmailSMTP.php')) {
-                    require_once 'libs/GmailSMTP.php';
-                    $smtp = new GmailSMTP(GMAIL_ADDRESS, $cleanPassword);
+                if (file_exists(__DIR__ . '/libs/GmailSMTP.php')) {
+                    require_once __DIR__ . '/libs/GmailSMTP.php';
+                    $smtp = new GmailSMTP(GMAIL_ADDRESS, $smtpPassword, $smtpDebug, SMTP_HOST, SMTP_PORT, $smtpCaFile, $smtpVerifyTls);
                     $emailSent = $smtp->sendEmail($email, $subject, $htmlMessage);
+                    $deliveryDiagnostic = $emailSent ? 'smtp_accepted' : 'smtp_rejected';
                 }
             }
 
             // Fallback to PHP mail() if SMTP fails or is not configured
-            if (!$emailSent) {
+            if (!$emailSent && GMAIL_ADDRESS !== '') {
                 $headers = "From: " . GMAIL_ADDRESS . "\r\n";
                 $headers .= "MIME-Version: 1.0\r\n";
                 $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
                 $emailSent = @mail($email, $subject, $htmlMessage, $headers);
             }
-        } catch (Exception $e) {
-            // Log error but don't expose it
+        } catch (Throwable $e) {
+            // Log the SMTP error and use the hosting provider's native mail
+            // transport as a production fallback.
             error_log("Email sending error: " . $e->getMessage());
-            $emailSent = false;
+            $signupLogDir = __DIR__ . '/logs';
+            if (!is_dir($signupLogDir)) @mkdir($signupLogDir, 0755, true);
+            $safeLogMessage = preg_replace(
+                '/(?:sk-(?:proj-)?[A-Za-z0-9_-]+|[A-Za-z0-9+\/=]{32,})/',
+                '[redacted]',
+                $e->getMessage()
+            );
+            @file_put_contents(
+                $signupLogDir . '/signup_email_errors.log',
+                '[' . date('Y-m-d H:i:s') . '] ' . get_class($e) . ': ' . $safeLogMessage . PHP_EOL,
+                FILE_APPEND | LOCK_EX
+            );
+            $errorMessage = strtolower($e->getMessage());
+            if (str_contains($errorMessage, 'authentication') || str_contains($errorMessage, 'smtp 535')) {
+                $deliveryDiagnostic = 'smtp_authentication_failed';
+            } elseif (str_contains($errorMessage, 'certificate') || str_contains($errorMessage, 'tls')) {
+                $deliveryDiagnostic = 'smtp_tls_failed';
+            } elseif (str_contains($errorMessage, 'connect')) {
+                $deliveryDiagnostic = 'smtp_connection_failed';
+            } else {
+                $deliveryDiagnostic = 'smtp_failed';
+            }
+            if (isset($subject, $htmlMessage) && defined('GMAIL_ADDRESS') && GMAIL_ADDRESS !== '') {
+                $fallbackHeaders = "From: " . GMAIL_ADDRESS . "\r\n";
+                $fallbackHeaders .= "Reply-To: " . GMAIL_ADDRESS . "\r\n";
+                $fallbackHeaders .= "MIME-Version: 1.0\r\n";
+                $fallbackHeaders .= "Content-Type: text/html; charset=UTF-8\r\n";
+                $emailSent = @mail($email, $subject, $htmlMessage, $fallbackHeaders);
+                if (!$emailSent) $deliveryDiagnostic .= '_and_native_mail_failed';
+            } else {
+                $emailSent = false;
+            }
         }
 
         if (!$emailSent) {
@@ -159,7 +229,11 @@ try {
 
             ob_end_clean();
             http_response_code(500);
-            echo json_encode(['success' => false, 'message' => 'Failed to send verification code. Please try again.']);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Failed to send verification code. Please try again.',
+                'diagnostic' => $deliveryDiagnostic
+            ]);
             exit;
         }
 
@@ -177,17 +251,10 @@ try {
     // ===== ACTION: VERIFY AND CREATE =====
     if ($action === 'verify_and_create') {
         $username = isset($_POST['username']) ? trim($_POST['username']) : '';
-        $email = isset($_POST['email']) ? trim($_POST['email']) : '';
+        $email    = isset($_POST['email']) ? trim($_POST['email']) : '';
+        $phone    = isset($_POST['phone']) ? trim($_POST['phone']) : '';
         $password = isset($_POST['password']) ? $_POST['password'] : '';
-        $code = isset($_POST['code']) ? trim($_POST['code']) : '';
-
-        // Log what we received for debugging
-        error_log("=== VERIFY AND CREATE DEBUG ===");
-        error_log("Username: [" . $username . "]");
-        error_log("Email: [" . $email . "]");
-        error_log("Password length: " . strlen($password));
-        error_log("Code: [" . $code . "]");
-        error_log("POST data: " . json_encode($_POST));
+        $code     = isset($_POST['code']) ? trim($_POST['code']) : '';
 
         // Validate inputs - provide specific error for each field
         if (empty($username)) {
@@ -305,13 +372,17 @@ try {
         $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
 
         // Create user account
-        $stmt = $conn->prepare("INSERT INTO users (username, email, password, created_at) VALUES (?, ?, ?, NOW())");
+        $stmt = $conn->prepare("INSERT INTO users (username, email, phone, password, created_at) VALUES (?, ?, ?, ?, NOW())");
         if (!$stmt) {
             throw new Exception("Prepare failed: " . $conn->error);
         }
-        $stmt->bind_param("sss", $username, $email, $hashedPassword);
+        $stmt->bind_param("ssss", $username, $email, $phone, $hashedPassword);
         $stmt->execute();
         $stmt->close();
+
+        // Send registration alert email to support@thetradingroutine.com
+        require_once __DIR__ . '/notify_admin.php';
+        $adminNotificationSent = notifySupportNewRegistration($username, $email, !empty($phone) ? $phone : 'N/A');
 
         // Delete verification code after success
         $stmt = $conn->prepare("DELETE FROM verification_codes WHERE email = ? AND code = ?");
@@ -328,14 +399,16 @@ try {
             'success' => true,
             'message' => 'Account created successfully',
             'username' => $username,
-            'email' => $email
+            'email' => $email,
+            'admin_notification_sent' => $adminNotificationSent
         ]);
         exit;
     }
 
     // ===== LEGACY ACTION (backward compatibility) =====
     $username = isset($_POST['username']) ? trim($_POST['username']) : '';
-    $email = isset($_POST['email']) ? trim($_POST['email']) : '';
+    $email    = isset($_POST['email']) ? trim($_POST['email']) : '';
+    $phone    = isset($_POST['phone']) ? trim($_POST['phone']) : '';
     $password = isset($_POST['password']) ? $_POST['password'] : '';
 
     if (empty($username) || empty($email) || empty($password)) {
@@ -396,13 +469,17 @@ try {
     // Hash password and create user
     $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
 
-    $stmt = $conn->prepare("INSERT INTO users (username, email, password, created_at) VALUES (?, ?, ?, NOW())");
+    $stmt = $conn->prepare("INSERT INTO users (username, email, phone, password, created_at) VALUES (?, ?, ?, ?, NOW())");
     if (!$stmt) {
         throw new Exception("Prepare failed: " . $conn->error);
     }
-    $stmt->bind_param("sss", $username, $email, $hashedPassword);
+    $stmt->bind_param("ssss", $username, $email, $phone, $hashedPassword);
     $stmt->execute();
     $stmt->close();
+
+    // Send registration alert email to support@thetradingroutine.com
+    require_once __DIR__ . '/notify_admin.php';
+    $adminNotificationSent = notifySupportNewRegistration($username, $email, !empty($phone) ? $phone : 'N/A');
 
     ob_end_clean();
     http_response_code(200);
@@ -410,9 +487,10 @@ try {
         'success' => true,
         'message' => 'Account created successfully',
         'username' => $username,
-        'email' => $email
+        'email' => $email,
+        'admin_notification_sent' => $adminNotificationSent
     ]);
-} catch (Exception $e) {
+} catch (Throwable $e) {
     ob_end_clean();
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);

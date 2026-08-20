@@ -346,6 +346,14 @@ include 'header.php';
         -webkit-text-fill-color: transparent;
     }
 
+    .mission-container .brand-name {
+        color: #eefaff !important;
+        background: var(--brand-title-gradient, linear-gradient(135deg, #ffffff 30%, #00d4ff)) !important;
+        background-clip: text !important;
+        -webkit-background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+    }
+
     .mission-container p {
         font-size: 1.15rem;
         line-height: 1.8;

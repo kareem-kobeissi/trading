@@ -6,6 +6,7 @@ db_out.txt
 # Local environment and database files
 .env
 .env.*
+!.env.example
 *.sqlite
 *.sqlite3
 *.db

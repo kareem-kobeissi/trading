@@ -278,7 +278,13 @@ include 'header.php';
             }
 
             allLogsCache = data.logs;
-            displayTransactions(allLogsCache);
+            const requestedEmail = new URLSearchParams(window.location.search).get('email');
+            if (requestedEmail) {
+                document.getElementById('searchInput').value = requestedEmail;
+                filterTransactions();
+            } else {
+                displayTransactions(allLogsCache);
+            }
 
         } catch (err) {
             tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:red;">Failed to load logs.</td></tr>`;

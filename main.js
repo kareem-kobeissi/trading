@@ -8,7 +8,7 @@ const isAdminLogged = localStorage.getItem('adminLogged') === 'true';
     if (isAdminLogged) {
         // Admin is logged in
         if (authLink) {
-            authLink.textContent = '📊 ' + t('adminPanel');
+            authLink.innerHTML = '<i class="fas fa-chart-line" aria-hidden="true"></i> ' + t('adminPanel');
             authLink.href = 'admin_dashboard.php';
         }
         if (signupLink) {
@@ -41,7 +41,6 @@ document.addEventListener('DOMContentLoaded', () => {
     updateAuthButtons();
     setupMobileMenu();
     setupScrollAnimations();
-    setupParallaxEffects();
     addLoadingAnimations();
 });
 
@@ -97,21 +96,6 @@ function setupScrollAnimations() {
         `;
         document.head.appendChild(style);
     }
-}
-
-// ===== PARALLAX EFFECTS =====
-function setupParallaxEffects() {
-    const hero = document.querySelector('.hero');
-    if (!hero) return;
-
-    window.addEventListener('scroll', () => {
-        const scrolled = window.pageYOffset;
-        const heroContent = document.querySelector('.hero-content');
-        if (heroContent && scrolled < window.innerHeight) {
-            heroContent.style.transform = `translateY(${scrolled * 0.3}px)`;
-            heroContent.style.opacity = 1 - (scrolled / window.innerHeight) * 0.8;
-        }
-    });
 }
 
 // ===== LOADING ANIMATIONS =====
@@ -294,12 +278,10 @@ function validatePassword(password) {
 
 // ===== LOGOUT FUNCTION =====
 function logout() {
-    if (confirm('Are you sure you want to logout?')) {
-        sessionStorage.removeItem('userLogged');
-        sessionStorage.removeItem('currentUsername');
-        sessionStorage.removeItem('currentEmail');
-        window.location.href = 'logout.php';
-    }
+    sessionStorage.removeItem('userLogged');
+    sessionStorage.removeItem('currentUsername');
+    sessionStorage.removeItem('currentEmail');
+    window.location.href = 'logout.php';
 }
 
 // User logout function (same as logout)
@@ -316,6 +298,7 @@ document.addEventListener('DOMContentLoaded', function () {
         let submittedEmail = null;
         let submittedUsername = null;
         let submittedPassword = null;
+        let submittedPhone = null;
 
         signupForm.addEventListener('submit', async function (e) {
             e.preventDefault();
@@ -324,13 +307,25 @@ document.addEventListener('DOMContentLoaded', function () {
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
+            const phoneElement = document.getElementById('signupPhone');
+            const localPhone = phoneElement ? phoneElement.value.trim() : '';
+            const phoneDigits = localPhone.replace(/\D/g, '').replace(/^0+/, '');
+            let selectedCountry = null;
+            if (window.signupPhoneInput) {
+                if (typeof window.signupPhoneInput.getSelectedCountry === 'function') {
+                    selectedCountry = window.signupPhoneInput.getSelectedCountry();
+                } else if (typeof window.signupPhoneInput.getSelectedCountryData === 'function') {
+                    selectedCountry = window.signupPhoneInput.getSelectedCountryData();
+                }
+            }
+            const phone = selectedCountry && selectedCountry.dialCode
+                ? `+${selectedCountry.dialCode}${phoneDigits}`
+                : localPhone;
             const verificationCode = document.getElementById('verificationCode').value.trim();
             const codeInputGroup = document.getElementById('codeInputGroup');
 
             // Step 2: Code verification and account creation
             if (isCodeStep) {
-                console.log('===== STEP 2: VERIFYING CODE AND CREATING ACCOUNT =====');
-
                 // Code verification and account creation
                 if (!verificationCode || verificationCode.length !== 6) {
                     alert('Please enter a valid 6-digit code');
@@ -354,14 +349,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 try {
                     // Build request body with stored values
-                    const bodyData = `action=verify_and_create&username=${encodeURIComponent(submittedUsername)}&email=${encodeURIComponent(submittedEmail)}&password=${encodeURIComponent(submittedPassword)}&code=${encodeURIComponent(verificationCode)}`;
-
-                    console.log('===== SUBMITTING VERIFICATION =====');
-                    console.log('Username:', submittedUsername, 'Length:', submittedUsername.length);
-                    console.log('Email:', submittedEmail, 'Length:', submittedEmail.length);
-                    console.log('Password length:', submittedPassword.length);
-                    console.log('Code:', verificationCode, 'Length:', verificationCode.length);
-                    console.log('Full body data:', bodyData);
+                    const bodyData = `action=verify_and_create&username=${encodeURIComponent(submittedUsername)}&email=${encodeURIComponent(submittedEmail)}&phone=${encodeURIComponent(submittedPhone)}&password=${encodeURIComponent(submittedPassword)}&code=${encodeURIComponent(verificationCode)}`;
 
                     const response = await fetch('auth_signup.php', {
                         method: 'POST',
@@ -371,22 +359,17 @@ document.addEventListener('DOMContentLoaded', function () {
                         body: bodyData
                     });
 
-                    console.log('Response status:', response.status);
-                    console.log('Response ok:', response.ok);
-
-                    // Get response text first to see if it's HTML or JSON
                     const responseText = await response.text();
-                    console.log('Response text:', responseText);
-
-                    if (!response.ok) {
-                        throw new Error('Server error: ' + response.status + ' - ' + responseText);
-                    }
 
                     let result;
                     try {
                         result = JSON.parse(responseText);
                     } catch (e) {
-                        throw new Error('Invalid response format: ' + responseText);
+                        throw new Error('The server returned an invalid response.');
+                    }
+
+                    if (!response.ok) {
+                        throw new Error(result.message || `Signup failed (${response.status})`);
                     }
 
                     if (result.success) {
@@ -395,6 +378,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         submittedEmail = null;
                         submittedUsername = null;
                         submittedPassword = null;
+                        submittedPhone = null;
                         signupForm.reset();
                         codeInputGroup.style.display = 'none';
                         window.location.href = 'login.php';
@@ -410,8 +394,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.log('===== STEP 1: SENDING VERIFICATION CODE =====');
 
                 // Form validation
-                if (!username || !email || !password || !confirmPassword) {
+                if (!username || !email || !phoneDigits || !password || !confirmPassword) {
                     alert('Please fill all required fields');
+                    return;
+                }
+
+                if (phoneDigits.length < 6 || phoneDigits.length > 15) {
+                    alert('Please enter a valid phone number');
                     return;
                 }
 
@@ -442,12 +431,17 @@ document.addEventListener('DOMContentLoaded', function () {
                     });
 
                     console.log('Send code response status:', response.status);
-
-                    if (!response.ok) {
-                        throw new Error('Server error: ' + response.status);
+                    const responseText = await response.text();
+                    let result;
+                    try {
+                        result = JSON.parse(responseText);
+                    } catch (_) {
+                        throw new Error(`Signup server error (${response.status}).`);
                     }
 
-                    const result = await response.json();
+                    if (!response.ok) {
+                        throw new Error(result.message || `Signup failed (${response.status})`);
+                    }
                     console.log('Send code result:', result);
 
                     if (result.success) {
@@ -455,6 +449,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         submittedEmail = email;
                         submittedUsername = username;
                         submittedPassword = password;
+                        submittedPhone = phone;
 
                         // Move to step 2
                         isCodeStep = true;
@@ -504,20 +499,28 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
 
-            // Check for admin login
-            if (email === 'Admin@thetradingroutine.com' && password === '123456') {
-              // REPLACE WITH:
-const adminTabId = 'tab_' + Date.now();
-localStorage.setItem('adminLogged', 'true');
-localStorage.setItem('adminEmail', email);
-localStorage.setItem('adminTabId', adminTabId);
-sessionStorage.setItem('myAdminTabId', adminTabId);
+            if (loginForm.dataset.adminLogin === 'true') {
+                const adminBody = new URLSearchParams({ email, password });
+                const adminResponse = await fetch('auth_admin.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: adminBody.toString()
+                });
+                const adminResult = await adminResponse.json();
+                if (!adminResponse.ok || !adminResult.success) {
+                    alert(adminResult.message || 'Administrator login failed');
+                    return;
+                }
+                const adminTabId = 'tab_' + Date.now();
+                localStorage.setItem('adminLogged', 'true');
+                localStorage.setItem('adminEmail', email);
+                localStorage.setItem('adminTabId', adminTabId);
+                sessionStorage.setItem('myAdminTabId', adminTabId);
                 if (rememberMe) {
                     localStorage.setItem('savedEmail', email);
                 } else {
                     localStorage.removeItem('savedEmail');
                 }
-                alert('Admin login successful! Redirecting to dashboard...');
                 window.location.href = 'admin_dashboard.php';
                 return;
             }
@@ -544,6 +547,18 @@ sessionStorage.setItem('myAdminTabId', adminTabId);
                 }
 
                 if (result.success) {
+                    if (result.is_admin) {
+                        const adminTabId = 'tab_' + Date.now();
+                        localStorage.setItem('adminLogged', 'true');
+                        localStorage.setItem('adminEmail', result.email || email);
+                        localStorage.setItem('adminTabId', adminTabId);
+                        sessionStorage.setItem('myAdminTabId', adminTabId);
+                        sessionStorage.removeItem('userLogged');
+                        sessionStorage.removeItem('currentUsername');
+                        sessionStorage.removeItem('currentEmail');
+                        window.location.href = 'admin_dashboard.php';
+                        return;
+                    }
                     sessionStorage.setItem('userLogged', 'true');
                     sessionStorage.setItem('currentUsername', result.username || '');
                     sessionStorage.setItem('currentEmail', result.email || email);
@@ -581,7 +596,8 @@ sessionStorage.setItem('myAdminTabId', adminTabId);
 
     // ===== LOAD CART =====
     const cartItems = document.querySelector('.cart-items');
-    if (cartItems) {
+    const usesCustomCartRenderer = document.querySelector('[data-custom-cart="true"]');
+    if (cartItems && !usesCustomCartRenderer) {
         displayCart();
         setupCartDelegation();
     }
@@ -677,8 +693,8 @@ async function loadCourses() {
                     <h3 class="course-title">${course.title}</h3>
                     <p class="course-description">${course.description.substring(0, 100)}...</p>
                     <div class="course-meta">
-                        <span>⏱️ ${course.duration}</span>
-                        <span>📊 ${course.level}</span>
+                        <span><i class="fas fa-clock" aria-hidden="true"></i> ${course.duration}</span>
+                        <span><i class="fas fa-signal" aria-hidden="true"></i> ${course.level}</span>
                     </div>
                     <div class="course-footer">
                         <div class="course-price">$${parseFloat(course.price).toFixed(2)}</div>
@@ -742,7 +758,7 @@ function displayCart() {
     if (!cartItemsContainer) return;
 
     if (cart.items.length === 0) {
-        cartItemsContainer.innerHTML = '<div class="empty-cart-message"><p data-i18n="emptyCart">🛒 Your cart is empty</p><p><a href="courses.php" class="btn btn-primary" data-i18n="continueShopping">Continue Shopping</a></p></div>';
+        cartItemsContainer.innerHTML = '<div class="empty-cart-message"><p><i class="fas fa-shopping-cart" aria-hidden="true"></i> <span data-i18n="emptyCart">Your cart is empty</span></p><p><a href="courses.php" class="btn btn-primary" data-i18n="continueShopping">Continue Shopping</a></p></div>';
         if (cartSummary) {
             cartSummary.style.display = 'none';
         }
@@ -767,16 +783,16 @@ function displayCart() {
             </div>
             <div class="cart-item-content">
                 <h3 class="cart-item-title">${item.title}</h3>
-                <p class="cart-item-instructor">👨‍🏫 <span data-i18n="instructor">Instructor</span>: ${item.instructor || 'Not specified'}</p>
+                <p class="cart-item-instructor"><i class="fas fa-user-tie" aria-hidden="true"></i> <span data-i18n="instructor">Instructor</span>: ${item.instructor || 'Not specified'}</p>
                 <p class="cart-item-description">${item.description ? item.description.substring(0, 80) + '...' : 'No description'}</p>
                 <div class="cart-item-details">
-                    <span class="detail-badge">⏱️ ${item.duration || 'N/A'}</span>
-                    <span class="detail-badge">📊 ${item.level || 'N/A'}</span>
+                    <span class="detail-badge"><i class="fas fa-clock" aria-hidden="true"></i> ${item.duration || 'N/A'}</span>
+                    <span class="detail-badge"><i class="fas fa-signal" aria-hidden="true"></i> ${item.level || 'N/A'}</span>
                 </div>
             </div>
             <div class="cart-item-actions">
                 <div class="item-price"><span data-i18n="price">Price</span>: <strong>$${parseFloat(item.price).toFixed(2)}</strong></div>
-                <button type="button" class="remove-btn" data-course-id="${item.id}" data-i18n="remove">🗑️ Remove</button>
+                <button type="button" class="remove-btn" data-course-id="${item.id}"><i class="fas fa-trash-alt" aria-hidden="true"></i> <span data-i18n="remove">Remove</span></button>
             </div>
         `;
         cartItemsContainer.appendChild(itemElement);
@@ -835,19 +851,16 @@ function setupCartDelegation() {
 
             console.log(`Remove button clicked for course ${courseId}`);
 
-            if (confirm('Are you sure you want to remove this course from your cart?')) {
-                console.log(`Confirmed: Removing course ${courseId}`);
-                try {
-                    cart.remove(courseId);
-                    console.log(`Course ${courseId} removed from cart`);
-                    console.log('Current cart items:', cart.items);
+            try {
+                cart.remove(courseId);
+                console.log(`Course ${courseId} removed from cart`);
+                console.log('Current cart items:', cart.items);
 
-                    // Refresh the display
-                    displayCart();
-                    console.log('Cart display updated');
-                } catch (error) {
-                    console.error('Error removing course:', error);
-                }
+                // Refresh the display
+                displayCart();
+                console.log('Cart display updated');
+            } catch (error) {
+                console.error('Error removing course:', error);
             }
         }
     };

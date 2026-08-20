@@ -1,6 +1,11 @@
 <?php
 // admin_dashboard.php
-include 'header.php'; // Using main header for consistency, but admin might need specific links
+require_once __DIR__ . '/config.php';
+if (empty($_SESSION['is_admin']) && empty($_SESSION['admin_logged_in'])) {
+    header('Location: admin_login.php');
+    exit;
+}
+include 'header.php';
 ?>
 <style>
     .admin-layout {
@@ -461,6 +466,336 @@ include 'header.php'; // Using main header for consistency, but admin might need
     }
 </style>
 
+<style>
+    /* Refined admin dashboard presentation */
+    .admin-layout {
+        width: min(1500px, 100%);
+        margin: 0 auto 3rem;
+        grid-template-columns: 250px minmax(0, 1fr);
+        gap: 1.25rem;
+        align-items: start;
+    }
+    .admin-sidebar {
+        top: 100px;
+        padding: 1.25rem;
+        border-radius: 18px;
+        background: linear-gradient(160deg, rgba(18,28,54,.94), rgba(7,12,30,.96));
+        border: 1px solid rgba(0,212,255,.18);
+        box-shadow: 0 18px 45px rgba(0,0,0,.26);
+        overflow: hidden;
+    }
+    .admin-sidebar::before {
+        content: '';
+        display: block;
+        width: 48px;
+        height: 4px;
+        margin: 0 0 1rem;
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--primary-color), #00b894);
+        box-shadow: 0 0 18px rgba(0,212,255,.35);
+    }
+    .admin-sidebar h3 { margin: 0 0 1.2rem; padding: 0; font-size: .85rem; letter-spacing: .13em; }
+    .sidebar-menu { display: grid; gap: .45rem; }
+    .sidebar-menu li { margin: 0; }
+    .sidebar-menu a {
+        min-height: 48px;
+        padding: .75rem .85rem;
+        border-radius: 11px;
+        font-size: .88rem;
+        border: 1px solid transparent;
+    }
+    .sidebar-menu a:hover { transform: translateX(4px); background: rgba(0,212,255,.07); }
+    .sidebar-menu a.active {
+        background: linear-gradient(135deg, rgba(0,212,255,.17), rgba(0,184,148,.08));
+        border-color: rgba(0,212,255,.32);
+        box-shadow: inset 3px 0 0 var(--primary-color), 0 8px 22px rgba(0,212,255,.08);
+    }
+    .admin-content {
+        min-width: 0;
+        padding: clamp(1.25rem, 2.4vw, 2.25rem);
+        border-radius: 20px;
+        background: linear-gradient(150deg, rgba(18,28,54,.75), rgba(7,12,30,.82));
+        border: 1px solid rgba(0,212,255,.12);
+        box-shadow: 0 20px 55px rgba(0,0,0,.24);
+    }
+    .admin-title {
+        width: fit-content;
+        margin: 0 0 1.5rem;
+        font-size: clamp(1.55rem, 3vw, 2.15rem);
+        letter-spacing: -.025em;
+    }
+    .admin-title::after {
+        content: '';
+        display: block;
+        width: 55%;
+        height: 3px;
+        margin-top: .55rem;
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--primary-color), transparent);
+    }
+    .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    .stat-card {
+        min-height: 145px;
+        padding: 1.25rem;
+        border-radius: 16px;
+        background: linear-gradient(145deg, rgba(255,255,255,.055), rgba(0,212,255,.025));
+        border: 1px solid rgba(255,255,255,.075);
+        box-shadow: 0 10px 28px rgba(0,0,0,.16);
+    }
+    .stat-card:hover { transform: translateY(-4px); }
+    .stat-label { margin-bottom: .7rem; font-size: .72rem; letter-spacing: .09em; line-height: 1.45; }
+    .stat-value, .stat-card .stat-value[style] { font-size: clamp(2rem, 4vw, 2.5rem) !important; line-height: 1.1; }
+    .orders-table-container {
+        padding: .7rem;
+        border-radius: 16px;
+        border: 1px solid rgba(0,212,255,.14);
+        background: rgba(5,10,25,.42);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.035);
+        scrollbar-color: var(--primary-color) rgba(255,255,255,.04);
+        scrollbar-width: thin;
+    }
+    .orders-table { border-collapse: separate; border-spacing: 0; }
+    .orders-table th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        padding: .85rem .8rem;
+        background: #111a34;
+        font-size: .7rem;
+        letter-spacing: .08em;
+    }
+    .orders-table th:first-child { border-radius: 10px 0 0 10px; }
+    .orders-table th:last-child { border-radius: 0 10px 10px 0; }
+    .orders-table td { padding: .85rem .8rem; font-size: .79rem; line-height: 1.45; }
+    .orders-table tbody tr:nth-child(even) { background: rgba(255,255,255,.018); }
+    .orders-table tbody tr:hover { background: rgba(0,212,255,.065); }
+
+    /* Show every order field without horizontal scrolling on laptop. */
+    .orders-table-container { overflow-x: visible; }
+    .orders-table {
+        width: 100%;
+        min-width: 0;
+        table-layout: fixed;
+    }
+    .orders-table th,
+    .orders-table td {
+        width: auto !important;
+        white-space: normal !important;
+        overflow-wrap: anywhere;
+        word-break: normal;
+    }
+    .orders-table th { font-size: .78rem; padding: .85rem .55rem; }
+    .orders-table td { font-size: .88rem; padding: .9rem .55rem; }
+    .orders-table th:nth-child(1), .orders-table td:nth-child(1) { width: 8% !important; }
+    .orders-table th:nth-child(2), .orders-table td:nth-child(2) { width: 10% !important; }
+    .orders-table th:nth-child(3), .orders-table td:nth-child(3) { width: 9% !important; }
+    .orders-table th:nth-child(4), .orders-table td:nth-child(4) { width: 15% !important; }
+    .orders-table th:nth-child(5), .orders-table td:nth-child(5) { width: 13% !important; }
+    .orders-table th:nth-child(6), .orders-table td:nth-child(6) { width: 13% !important; }
+    .orders-table th:nth-child(7), .orders-table td:nth-child(7) { width: 8% !important; }
+    .orders-table th:nth-child(8), .orders-table td:nth-child(8) { width: 8% !important; }
+    .orders-table th:nth-child(9), .orders-table td:nth-child(9) { width: 16% !important; }
+    .orders-table td:nth-child(9) button { width: 100%; display: block; margin: .3rem 0 !important; }
+
+    @media (min-width: 761px) {
+        .orders-table-container { padding: 0; border: 0; background: transparent; }
+        .orders-table,
+        .orders-table tbody { display: block; width: 100%; }
+        .orders-table thead { display: none; }
+        .orders-table tbody { display: grid; gap: 1rem; }
+        .orders-table tr {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0;
+            padding: .75rem;
+            border: 1px solid rgba(0,212,255,.16);
+            border-radius: 15px;
+            background: linear-gradient(145deg, rgba(255,255,255,.045), rgba(0,212,255,.025));
+            box-shadow: 0 12px 30px rgba(0,0,0,.16);
+        }
+        .orders-table td,
+        .orders-table td:nth-child(n) {
+            display: flex;
+            flex-direction: column;
+            gap: .4rem;
+            width: auto !important;
+            min-width: 0;
+            padding: .85rem 1rem;
+            border-right: 1px solid rgba(255,255,255,.06);
+            border-bottom: 1px solid rgba(255,255,255,.06);
+            font-size: .94rem;
+            line-height: 1.5;
+        }
+        .orders-table td:nth-child(3n) { border-right: 0; }
+        .orders-table td:nth-child(7),
+        .orders-table td:nth-child(8) { border-bottom: 0; }
+        .orders-table td::before {
+            color: var(--primary-color);
+            font-size: .68rem;
+            font-weight: 800;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+        }
+        .orders-table td:nth-child(1)::before { content: 'Ref ID'; }
+        .orders-table td:nth-child(2)::before { content: 'Full Name'; }
+        .orders-table td:nth-child(3)::before { content: 'Phone'; }
+        .orders-table td:nth-child(4)::before { content: 'Email'; }
+        .orders-table td:nth-child(5)::before { content: 'Products'; }
+        .orders-table td:nth-child(6)::before { content: 'Created Date / Time'; }
+        .orders-table td:nth-child(7)::before { content: 'Total'; }
+        .orders-table td:nth-child(8)::before { content: 'Status'; }
+        .orders-table td:nth-child(9)::before { content: 'Actions'; grid-column: 1 / -1; }
+        .orders-table td:nth-child(9) {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: .6rem;
+            border: 0;
+            border-top: 1px solid rgba(0,212,255,.1);
+            margin-top: .2rem;
+            padding-top: 1rem;
+        }
+        .orders-table td:nth-child(9) button {
+            width: 100%;
+            min-height: 40px;
+            margin: 0 !important;
+            font-size: .8rem !important;
+        }
+    }
+    .status-badge { padding: .38rem .65rem; border-radius: 999px; font-size: .68rem; }
+    .unlock-btn, .delete-btn {
+        min-height: 34px;
+        padding: .45rem .7rem !important;
+        border-radius: 8px !important;
+        font-size: .72rem !important;
+        margin: .15rem !important;
+    }
+
+    .orders-table button[onclick*="'revert_item'"] {
+        background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+        color: #1b1202 !important;
+        border: 1px solid rgba(255,193,7,.75) !important;
+        box-shadow: 0 5px 14px rgba(245,158,11,.2) !important;
+    }
+
+    .orders-table button[onclick*="'cancel_item'"] {
+        background: rgba(239,68,68,.1) !important;
+        color: #ff8585 !important;
+        border: 1px solid rgba(239,68,68,.48) !important;
+        box-shadow: none !important;
+    }
+
+    .orders-table button[onclick*="'delete_item'"] {
+        background: linear-gradient(135deg, #991b1b, #5f1010) !important;
+        color: #fff !important;
+        border: 1px solid rgba(255,100,100,.35) !important;
+        box-shadow: 0 5px 14px rgba(127,29,29,.25) !important;
+    }
+
+    .orders-table button[onclick*="'revert_item'"],
+    .orders-table button[onclick*="'cancel_item'"],
+    .orders-table button[onclick*="'delete_item'"] {
+        min-width: 72px;
+        font-weight: 750 !important;
+        letter-spacing: .01em;
+        transition: transform .2s ease, box-shadow .2s ease, filter .2s ease !important;
+    }
+
+    .orders-table button[onclick*="'revert_item'"]:hover,
+    .orders-table button[onclick*="'cancel_item'"]:hover,
+    .orders-table button[onclick*="'delete_item'"]:hover {
+        transform: translateY(-2px) !important;
+        filter: brightness(1.12);
+    }
+    .empty-state { padding: 3rem 1.25rem; border-radius: 14px; }
+    #settingsSection > div {
+        background: linear-gradient(145deg, rgba(255,255,255,.045), rgba(0,212,255,.025)) !important;
+        border-color: rgba(0,212,255,.17) !important;
+        box-shadow: 0 12px 35px rgba(0,0,0,.14);
+    }
+    @media (max-width: 992px) {
+        .admin-layout { grid-template-columns: 1fr; gap: 1rem; }
+        .admin-sidebar { position: static; padding: .9rem; }
+        .admin-sidebar::before { display: none; }
+        .admin-sidebar h3 { margin-bottom: .75rem; text-align: center; }
+        .sidebar-menu {
+            display: flex;
+            gap: .55rem;
+            overflow-x: auto;
+            padding-bottom: .25rem;
+            scroll-snap-type: x proximity;
+        }
+        .sidebar-menu li { flex: 0 0 auto; scroll-snap-align: start; }
+        .sidebar-menu a { white-space: nowrap; min-height: 42px; padding: .65rem .8rem; }
+        .sidebar-menu a.active { box-shadow: inset 0 -3px 0 var(--primary-color); }
+    }
+    @media (max-width: 600px) {
+        .section:has(.admin-layout) { padding: 1rem .65rem; }
+        .admin-content { padding: 1rem .7rem; border-radius: 15px; }
+        .admin-title { font-size: 1.45rem; margin-bottom: 1.15rem; }
+        .stats-grid { grid-template-columns: 1fr 1fr; gap: .65rem; }
+        .stat-card { min-height: 120px; padding: .9rem; }
+        .stat-label { font-size: .63rem; }
+        .stat-value, .stat-card .stat-value[style] { font-size: 1.75rem !important; }
+        .orders-table-container { padding: .4rem; border-radius: 12px; }
+        .orders-table td { padding: .7rem .65rem; }
+        #settingsSection > div { padding: 1.25rem !important; }
+    }
+
+    @media (max-width: 760px) {
+        .orders-table-container { padding: 0; border: 0; background: transparent; overflow: visible; }
+        .orders-table, .orders-table tbody { display: block; width: 100%; }
+        .orders-table thead { display: none; }
+        .orders-table tr {
+            display: block;
+            width: 100%;
+            margin-bottom: 1rem;
+            padding: .6rem;
+            border: 1px solid rgba(0,212,255,.16);
+            border-radius: 14px;
+            background: linear-gradient(145deg, rgba(255,255,255,.045), rgba(0,212,255,.025));
+            box-shadow: 0 10px 25px rgba(0,0,0,.16);
+        }
+        .orders-table td,
+        .orders-table td:nth-child(n) {
+            display: grid;
+            grid-template-columns: 112px minmax(0, 1fr);
+            gap: .75rem;
+            align-items: start;
+            width: 100% !important;
+            padding: .65rem .55rem;
+            border-bottom: 1px solid rgba(255,255,255,.065);
+            font-size: .92rem;
+            text-align: left;
+        }
+        .orders-table td:last-child { border-bottom: 0; }
+        .orders-table td::before {
+            color: var(--primary-color);
+            font-size: .7rem;
+            font-weight: 800;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+        }
+        .orders-table td:nth-child(1)::before { content: 'Ref ID'; }
+        .orders-table td:nth-child(2)::before { content: 'Full Name'; }
+        .orders-table td:nth-child(3)::before { content: 'Phone'; }
+        .orders-table td:nth-child(4)::before { content: 'Email'; }
+        .orders-table td:nth-child(5)::before { content: 'Products'; }
+        .orders-table td:nth-child(6)::before { content: 'Created'; }
+        .orders-table td:nth-child(7)::before { content: 'Total'; }
+        .orders-table td:nth-child(8)::before { content: 'Status'; }
+        .orders-table td:nth-child(9)::before { content: 'Action'; }
+        .orders-table td:nth-child(9) button { width: 100%; margin: .25rem 0 !important; font-size: .8rem !important; }
+    }
+    @media (max-width: 390px) {
+        .stats-grid { grid-template-columns: 1fr; }
+    }
+</style>
+
 <!-- ===== ADMIN DASHBOARD ===== -->
 <section class="section">
     <div class="admin-layout">
@@ -536,7 +871,7 @@ include 'header.php'; // Using main header for consistency, but admin might need
             <div id="settingsSection" class="section-content" style="display: none;">
                 <h2 class="admin-title" data-i18n="securityAccess">Security & Access</h2>
                 <div style="background: rgba(255, 255, 255, 0.03); border-radius: 16px; padding: 2.5rem; border: 1px solid rgba(0, 212, 255, 0.1);">
-                    <p style="color: var(--text-muted); margin-bottom: 2rem; font-size: 1.1rem;" data-i18n="adminLoginMsg">You are currently logged in as super-admin. Maintain strict confidentiality of access tokens.</p>
+                    
                     <div style="padding: 1.5rem; border-radius: 10px; background: rgba(0, 212, 255, 0.05); margin-bottom: 2rem;">
                         <code style="color: var(--primary-color);">ID: admin_root_001</code>
                     </div>
@@ -547,9 +882,42 @@ include 'header.php'; // Using main header for consistency, but admin might need
     </div>
 </section>
 
-<!-- 
-    REPLACE the entire <script>...</script> block in admin_dashboard.php with this
--->
+<div id="automationModal" class="automation-modal" hidden>
+    <div class="automation-modal-card" role="dialog" aria-modal="true" aria-labelledby="automationModalTitle">
+        <button type="button" class="automation-close" onclick="closeAutomationPanel()" aria-label="Close">&times;</button>
+        <h2 id="automationModalTitle">Customer Conversation Review</h2>
+        <div id="automationMessages" class="automation-messages"></div>
+        <form id="automationReplyForm" class="automation-reply" onsubmit="sendAutomationReply(event)">
+            <label for="automationReplyMessage">Message customer</label>
+            <textarea id="automationReplyMessage" maxlength="10000" rows="5" placeholder="Write your message to the customer..." required></textarea>
+            <button type="submit" class="btn btn-primary">Send and save</button>
+            <span id="automationReplyStatus" role="status"></span>
+        </form>
+    </div>
+</div>
+
+<style>
+    .automation-modal { position: fixed; inset: 0; z-index: 10000; padding: 4vh 1rem; background: rgba(3,8,24,.82); overflow-y: auto; }
+    .automation-modal[hidden] { display: none; }
+    .automation-modal-card { position: relative; width: min(860px, 100%); margin: auto; padding: 1.5rem; border: 1px solid rgba(0,212,255,.28); border-radius: 18px; background: #0d1730; box-shadow: 0 24px 80px rgba(0,0,0,.55); }
+    .automation-modal-card h2 { margin: 0 2.5rem 1rem 0; color: var(--primary-color); }
+    .automation-close { position: absolute; right: 1rem; top: .8rem; border: 0; background: transparent; color: #fff; font-size: 2rem; cursor: pointer; }
+    .automation-messages { display: grid; gap: .9rem; }
+    .automation-reply { display:grid; gap:.75rem; margin-top:1rem; padding-top:1rem; border-top:1px solid rgba(255,255,255,.1); }
+    .automation-reply label { color:#78e8ff; font-weight:700; }
+    .automation-reply textarea { width:100%; resize:vertical; padding:.9rem; color:#fff; background:#091229; border:1px solid rgba(0,212,255,.3); border-radius:10px; font:inherit; }
+    .automation-reply button { justify-self:start; }
+    #automationReplyStatus { color:#b9cae0; font-size:.9rem; }
+    .automation-message { padding: 1rem; border: 1px solid rgba(255,255,255,.1); border-radius: 12px; background: rgba(255,255,255,.035); }
+    .automation-message.incoming { border-color: rgba(245,157,0,.35); }
+    .automation-message-meta { margin-bottom: .65rem; color: #8da2c8; font-size: .8rem; }
+    .automation-message h4 { margin: .75rem 0 .35rem; color: #78e8ff; }
+    .automation-message pre { margin: 0; color: #eef4ff; white-space: pre-wrap; word-break: break-word; font: inherit; line-height: 1.55; }
+    .automation-proof-links { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .75rem; }
+    .automation-proof-links a { padding: .45rem .7rem; border-radius: 8px; background: rgba(0,212,255,.12); color: #78e8ff; text-decoration: none; }
+    @media (max-width: 600px) { .automation-review-summary { grid-template-columns: 1fr; } .automation-modal-card { padding: 1rem; } }
+</style>
+
 <script>
     function checkAdminAuth() {
         // No auth check - admin access is unrestricted
@@ -559,7 +927,9 @@ include 'header.php'; // Using main header for consistency, but admin might need
         const ordersContainer = document.getElementById('ordersContainer');
 
         try {
-            const response = await fetch('get_orders.php');
+            const response = await fetch('get_orders.php?refresh=' + Date.now(), {
+                cache: 'no-store'
+            });
             const data = await response.json();
 
             if (!data.success) {
@@ -616,10 +986,9 @@ include 'header.php'; // Using main header for consistency, but admin might need
                 } else if (order.status === 'unlocked') {
                     actionBtn = `<button class="unlock-btn" onclick="updateOrder('revert_item','${orderId}',${dbId},${itemId})" style="background-color:#f59d00;cursor:pointer;">↩️ ${t('revert')}</button>`;
                 } else {
-                    actionBtn = `<button class="unlock-btn" onclick="updateOrder('approve_item','${orderId}',${dbId},${itemId})"> ${t('approve')}</button>`;
+                    actionBtn = `<button class="unlock-btn" onclick="updateOrder('approve_item','${orderId}',${dbId},${itemId})" style="background-color:#00b894;cursor:pointer;font-weight:bold;padding:0.45rem 0.85rem;font-size:0.85rem;box-shadow:0 0 10px rgba(0,184,148,0.4);">✓ Approve</button>
+                                 <button class="unlock-btn" onclick="updateOrder('cancel_item','${orderId}',${dbId},${itemId})" style="background-color:#ff6b6b;cursor:pointer;margin-left:0.3rem;">✕ Reject</button>`;
                 }
-
-
 
                 const createdDisplay = order.createdTime ? new Date(order.createdTime).toLocaleString('en-US', {
                     year: 'numeric',
@@ -634,19 +1003,23 @@ include 'header.php'; // Using main header for consistency, but admin might need
                     <td>${order.name}</td>
                     <td>${order.phone}</td>
                     <td>${order.email}</td>
-<td>
-    ${order.product_type === 'ea' ? 'TTR Risk Calculator' : 
-      order.product_type === 'robot' ? 'TTR Robot' : 
-      order.product_type === 'robot_sr' ? 'S&R Precision EA' : 
-      order.product_type === 'robot_ib' ? 'Instant Breakout EA' : 
-      'Trading Mastery Course'}
-</td>                    <td>${createdDisplay}</td>
+                    <td>
+                        ${order.product_type === 'ea' ? 'TTR Risk Calculator' :
+                          order.product_type === 'robot' ? 'TTR Robot' :
+                          order.product_type === 'robot_sr' ? 'S&R Precision EA' :
+                          order.product_type === 'robot_ib' ? 'Instant Breakout EA' :
+                          order.product_type === 'indicator' ? 'The Holly Grail Indicator' :
+                          'Trading Mastery Course'}
+                    </td>
+                    <td>${createdDisplay}</td>
                     <td title="Includes 1% processing fee">$${parseFloat(order.total).toFixed(2)} USD</td>
                     <td><span class="status-badge ${statusClass}">${statusText}</span></td>
                     <td>
                         ${actionBtn}
-                        <button class="delete-btn" onclick="updateOrder('cancel_item','${orderId}',${dbId},${itemId})" style="margin-left:0.5rem;">${t('delete')}</button>
-                        <button class="delete-btn" onclick="updateOrder('delete_item','${orderId}',${dbId},${itemId})" style="margin-left:0.3rem;background-color:#991b1b;"> Remove</button>
+                        <button class="unlock-btn" onclick="updateOrder('delete_item','${orderId}',${dbId},${itemId})" style="margin-left:0.3rem;background:#e63946;cursor:pointer;" title="Permanently Delete Order">🗑️ Delete</button>
+                        <button class="unlock-btn" onclick="downloadCustomerExcel('${encodeURIComponent(order.email)}')" style="margin-left:0.3rem;background:#087f5b;">Excel</button>
+                        <button class="unlock-btn" onclick="openCustomerHistory('${encodeURIComponent(order.email)}')" style="margin-left:0.3rem;background:#364fc7;">History</button>
+                        <button class="unlock-btn" onclick="openAutomationPanel(${dbId})" style="margin-left:0.3rem;background:#0b7285;">Conversation</button>
                     </td>
                 </tr>`;
             });
@@ -660,6 +1033,14 @@ include 'header.php'; // Using main header for consistency, but admin might need
             console.error('Error loading orders:', err);
             ordersContainer.innerHTML = '<div class="empty-state">Failed to load orders. Check console for details.</div>';
         }
+    }
+
+    function downloadCustomerExcel(encodedEmail) {
+        window.location.href = 'export_customer_history.php?email=' + encodedEmail;
+    }
+
+    function openCustomerHistory(encodedEmail) {
+        window.location.href = 'admin_history.php?email=' + encodedEmail;
     }
 
     // ===== UPDATE ORDER STATUS =====
@@ -719,11 +1100,6 @@ include 'header.php'; // Using main header for consistency, but admin might need
             const result = await response.json();
 
             if (result.success) {
-                if (action === 'approve_item') {
-                    sendApprovalEmail(orderId, orderDetails);
-                } else if (action === 'cancel_item' || action === 'delete_item') {
-                    sendCancellationEmail(orderId, orderDetails);
-                }
                 loadOrders();
             } else {
                 alert('Error: ' + result.message);
@@ -731,6 +1107,82 @@ include 'header.php'; // Using main header for consistency, but admin might need
         } catch (err) {
             alert('Request failed: ' + err.message);
         }
+    }
+
+    function escapeAutomationHtml(value) {
+        return String(value ?? '').replace(/[&<>'"]/g, char => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+        })[char]);
+    }
+
+    function attachmentLinks(raw) {
+        if (!raw) return '';
+        let links = [];
+        try { links = JSON.parse(raw); } catch (_) { links = [raw]; }
+        links = Array.isArray(links) ? links : [];
+        const safeLinks = links.filter(link => /^uploads\/automation\/\d+\/[a-f0-9]+\.(?:jpg|png|webp|pdf)$/i.test(link));
+        if (!safeLinks.length) return '';
+        return `<div class="automation-proof-links">${safeLinks.map((link, index) =>
+            `<a href="download_automation_attachment.php?path=${encodeURIComponent(link)}" target="_blank" rel="noopener">View proof ${index + 1}</a>`
+        ).join('')}</div>`;
+    }
+
+    async function openAutomationPanel(orderId) {
+        const modal = document.getElementById('automationModal');
+        const messages = document.getElementById('automationMessages');
+        modal.hidden = false;
+        modal.dataset.orderId = orderId;
+        document.getElementById('automationReplyMessage').value = '';
+        document.getElementById('automationReplyStatus').textContent = '';
+        messages.innerHTML = '<div>Loading conversation...</div>';
+        try {
+            const response = await fetch(`get_order_automation.php?order_id=${encodeURIComponent(orderId)}`, { cache: 'no-store' });
+            const data = await response.json();
+            if (!response.ok || !data.success) throw new Error(data.message || 'Unable to load conversation');
+            messages.innerHTML = data.messages.length ? data.messages.map(message => `
+                <article class="automation-message ${escapeAutomationHtml(message.direction)}">
+                    <div class="automation-message-meta">${escapeAutomationHtml(message.direction)} via ${escapeAutomationHtml(message.channel)} · ${escapeAutomationHtml(message.created_at)}</div>
+                    <h4>Original message</h4><pre>${escapeAutomationHtml(message.original_message)}</pre>
+                    ${message.ai_summary ? `<h4>AI summary</h4><pre>${escapeAutomationHtml(message.ai_summary)}</pre>` : ''}
+                    ${attachmentLinks(message.attachment_url)}
+                </article>`).join('') : '<div class="empty-state">No messages recorded yet.</div>';
+        } catch (error) {
+            messages.innerHTML = `<div>${escapeAutomationHtml(error.message)}</div>`;
+        }
+    }
+
+    async function sendAutomationReply(event) {
+        event.preventDefault();
+        const modal = document.getElementById('automationModal');
+        const messageInput = document.getElementById('automationReplyMessage');
+        const status = document.getElementById('automationReplyStatus');
+        const button = event.currentTarget.querySelector('button[type="submit"]');
+        const orderId = Number(modal.dataset.orderId || 0);
+        const message = messageInput.value.trim();
+        if (!orderId || !message) return;
+
+        button.disabled = true;
+        status.textContent = 'Sending...';
+        try {
+            const response = await fetch('admin_send_customer_message.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ order_id: orderId, message })
+            });
+            const result = await response.json();
+            if (!response.ok || !result.success) throw new Error(result.message || 'Unable to send message');
+            messageInput.value = '';
+            status.textContent = 'Message sent and saved.';
+            await openAutomationPanel(orderId);
+        } catch (error) {
+            status.textContent = error.message;
+        } finally {
+            button.disabled = false;
+        }
+    }
+
+    function closeAutomationPanel() {
+        document.getElementById('automationModal').hidden = true;
     }
 
     function sendApprovalEmail(orderId, d) {
@@ -845,12 +1297,13 @@ include 'header.php'; // Using main header for consistency, but admin might need
         document.querySelectorAll('.menu-link').forEach(el => el.classList.remove('active'));
         document.getElementById(section + 'Section').style.display = 'block';
         event.target.classList.add('active');
-        if (section === 'orders') loadOrders();
+        if (section === 'orders' || section === 'stats') loadOrders();
     }
 
     // ===== ADMIN LOGOUT =====
-    function adminLogout() {
+    async function adminLogout() {
         if (confirm('Are you sure you want to logout?')) {
+            await fetch('auth_admin_logout.php', { method: 'POST' }).catch(() => {});
             localStorage.removeItem('adminLogged');
             localStorage.removeItem('adminEmail');
             window.location.href = 'login.php';
@@ -861,13 +1314,14 @@ include 'header.php'; // Using main header for consistency, but admin might need
     checkAdminAuth();
     loadOrders();
 
-    // Auto-refresh every 30 seconds
-    setInterval(loadOrders, 20000);
+    // Keep Customer Orders and Market Insights synchronized with the database.
+    setInterval(loadOrders, 8000);
 
     // Refresh when tab becomes visible
     document.addEventListener('visibilitychange', function() {
         if (!document.hidden) loadOrders();
     });
+    window.addEventListener('focus', loadOrders);
 </script>
 
 <?php include 'footer.php'; ?>

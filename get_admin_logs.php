@@ -1,8 +1,15 @@
 <?php
 header('Content-Type: application/json');
 include 'config.php';
+require_once 'admin_log_schema.php';
 date_default_timezone_set('Asia/Beirut');
 $conn->query("SET time_zone = '+02:00'");
+
+$schemaError = ensureAdminLogSchema($conn);
+if ($schemaError) {
+    echo json_encode(['success' => false, 'message' => $schemaError]);
+    exit();
+}
 
 $sql = "SELECT * FROM admin_logs ORDER BY performed_at DESC";
 $result = $conn->query($sql);

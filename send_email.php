@@ -5,10 +5,16 @@ error_reporting(E_ALL);
 ini_set('display_errors', 0);
 
 header('Content-Type: application/json');
+require_once __DIR__ . '/config.php';
+
+if (empty($_SESSION['is_admin']) && empty($_SESSION['admin_logged_in'])) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'Administrator authentication required']);
+    exit;
+}
 
 // Create detailed debug log
 $debugLog = "DEBUG LOG: " . date('Y-m-d H:i:s') . "\n";
-$debugLog .= "POST data: " . json_encode($_POST) . "\n";
 
 $response = ['success' => false, 'message' => ''];
 
@@ -34,16 +40,19 @@ if (!filter_var($toEmail, FILTER_VALIDATE_EMAIL)) {
 // GMAIL SMTP CONFIGURATION
 // ============================================
 // Using Gmail SMTP (simpler than Outlook)
-$smtpHost = 'smtp.gmail.com';
-$smtpPort = 587;
-$smtpUsername = 'thetradingroutine@gmail.com';
-$smtpPassword = 'sbkm xzof swvo lrlc';  // Gmail App Password
-$senderEmail = 'thetradingroutine@gmail.com';  // Display this email to users
-$senderName = 'The Trading Routine';
+$smtpHost = getenv('SMTP_HOST') ?: 'smtp.hostinger.com';
+$smtpPort = (int) (getenv('SMTP_PORT') ?: 587);
+$smtpUsername = getenv('SMTP_USERNAME') ?: '';
+$smtpPassword = getenv('SMTP_PASSWORD') ?: '';
+$senderEmail = getenv('SMTP_FROM_EMAIL') ?: $smtpUsername;
+$senderName = getenv('SMTP_FROM_NAME') ?: 'The Trading Routine';
 
 // ============================================
 
 try {
+    if ($smtpUsername === '' || $smtpPassword === '') {
+        throw new Exception('SMTP is not configured');
+    }
     $debugLog .= "Attempting to connect to $smtpHost:$smtpPort\n";
 
     // Connect to SMTP server
@@ -115,11 +124,15 @@ try {
     usleep(100000);
 
     // Send encoded username
-    smtp_command($socket, base64_encode($smtpUsername), $debugLog);
+    fwrite($socket, base64_encode($smtpUsername) . "\r\n");
+    $usernameResp = fgets($socket, 1024);
+    $debugLog .= "SMTP username response: " . trim((string) $usernameResp) . "\n";
     usleep(100000);
 
     // Send encoded password
-    $authResp = smtp_command($socket, base64_encode($smtpPassword), $debugLog);
+    fwrite($socket, base64_encode($smtpPassword) . "\r\n");
+    $authResp = fgets($socket, 1024);
+    $debugLog .= "SMTP authentication response: " . trim((string) $authResp) . "\n";
     usleep(100000);
 
     if (strpos($authResp, '235') === false && strpos($authResp, '550') !== false) {

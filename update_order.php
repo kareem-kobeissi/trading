@@ -2,6 +2,45 @@
 // update_order.php
 header('Content-Type: application/json');
 include 'config.php';
+require_once 'admin_log_schema.php';
+require_once __DIR__ . '/automation_queue.php';
+
+if (empty($_SESSION['is_admin']) && empty($_SESSION['admin_logged_in'])) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'Administrator authentication required']);
+    exit();
+}
+
+function queueOrderStatusNotification($conn, $orderId, $status)
+{
+    $stmt = $conn->prepare('SELECT id, order_ref, name, email FROM orders WHERE id = ? LIMIT 1');
+    $stmt->bind_param('i', $orderId);
+    $stmt->execute();
+    $order = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    if (!$order) return false;
+
+    $messages = [
+        'unlocked' => 'Your access has been activated.',
+        'cancelled' => 'The administrator could not approve this request. Contact support if you need assistance.',
+        'pending' => 'Your request is pending administrator review.'
+    ];
+    return queueAutomationEvent($conn, $orderId, 'order.status_changed', [
+        'order' => [
+            'id' => (int) $order['id'],
+            'reference' => $order['order_ref'],
+            'status' => $status,
+            'status_message' => $messages[$status] ?? '',
+            'customer' => ['name' => $order['name'], 'email' => $order['email']]
+        ]
+    ]);
+}
+
+$schemaError = ensureAdminLogSchema($conn);
+if ($schemaError) {
+    echo json_encode(['success' => false, 'message' => $schemaError]);
+    exit();
+}
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['success' => false, 'message' => 'Invalid request']);
@@ -28,13 +67,25 @@ $where = $db_id ? "id = $db_id" : "order_ref = '$order_ref'";
 
 // ===== PER-ITEM ACTIONS =====
 if (in_array($action, ['approve_item', 'cancel_item', 'restore_item', 'revert_item']) && $item_id) {
-    $newStatus = match ($action) {
+    $statusMap = [
         'approve_item' => 'unlocked',
-        'cancel_item'  => 'cancelled',
-        'restore_item', 'revert_item' => 'pending',
-    };
+        'cancel_item' => 'cancelled',
+        'restore_item' => 'pending',
+        'revert_item' => 'pending'
+    ];
+    $newStatus = $statusMap[$action];
+    $parentResult = $conn->query("SELECT order_id FROM order_items WHERE id = $item_id LIMIT 1");
+    $parentOrderId = $parentResult && $parentResult->num_rows ? (int) $parentResult->fetch_assoc()['order_id'] : 0;
     $sql = "UPDATE order_items SET item_status = '$newStatus' WHERE id = $item_id";
     if ($conn->query($sql)) {
+        // Update parent order status as well
+        if ($newStatus === 'unlocked') {
+            $conn->query("UPDATE orders o JOIN order_items oi ON o.id = oi.order_id SET o.status = 'unlocked', o.unlocked_at = NOW() WHERE oi.id = $item_id");
+        } else if ($newStatus === 'cancelled') {
+            $conn->query("UPDATE orders o JOIN order_items oi ON o.id = oi.order_id SET o.status = 'cancelled', o.cancelled_at = NOW() WHERE oi.id = $item_id");
+        } else if ($newStatus === 'pending') {
+            $conn->query("UPDATE orders o JOIN order_items oi ON o.id = oi.order_id SET o.status = 'pending' WHERE oi.id = $item_id");
+        }
         // Log the action
         $logRef = $order_ref ?: "ITEM-$item_id";
         $custRes = $conn->query("SELECT o.name, o.email, oi.product_type FROM orders o JOIN order_items oi ON o.id = oi.order_id WHERE oi.id = $item_id LIMIT 1");
@@ -49,6 +100,7 @@ if (in_array($action, ['approve_item', 'cancel_item', 'restore_item', 'revert_it
         }
         $logAction = str_replace('_item', '', $action);
         $conn->query("INSERT INTO admin_logs (order_ref, customer_name, customer_email, action, product_type, performed_at) VALUES ('$logRef', '$cName', '$cEmail', '$logAction', '$pType', NOW())");
+        if ($parentOrderId) queueOrderStatusNotification($conn, $parentOrderId, $newStatus);
         echo json_encode(['success' => true, 'message' => 'Item updated successfully']);
     } else {
         echo json_encode(['success' => false, 'message' => 'Update failed: ' . $conn->error]);
@@ -140,7 +192,16 @@ if ($conn->query($sql)) {
         $customerEmail = $conn->real_escape_string($row['email']);
     }
     $conn->query("INSERT INTO admin_logs (order_ref, customer_name, customer_email, action, performed_at) 
-                  VALUES ('$order_ref', '$customerName', '$customerEmail', '$action', NOW())");
+                      VALUES ('$order_ref', '$customerName', '$customerEmail', '$action', NOW())");
+
+    if (!$db_id) {
+        $idResult = $conn->query("SELECT id FROM orders WHERE $where LIMIT 1");
+        if ($idResult && $idResult->num_rows) $db_id = (int) $idResult->fetch_assoc()['id'];
+    }
+    $statusForAction = ['approve' => 'unlocked', 'cancel' => 'cancelled', 'restore' => 'pending', 'revert' => 'pending'];
+    if ($db_id && isset($statusForAction[$action])) {
+        queueOrderStatusNotification($conn, $db_id, $statusForAction[$action]);
+    }
 
     echo json_encode(['success' => true, 'message' => 'Order updated successfully']);
 } else {

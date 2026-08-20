@@ -3,6 +3,8 @@
 include 'header.php';
 ?>
 
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@29.1.0/dist/css/intlTelInput.css">
+
 <div class="form-container">
     <div class="form-icon"></div>
     <h2 class="form-title" data-i18n="joinUs">Start Your Professional Trading Journey</h2>
@@ -25,6 +27,14 @@ include 'header.php';
                 <input type="email" id="email" name="email" placeholder="Email" required>
                 <span class="input-focus-border"></span>
             </div>
+        </div>
+        <div class="form-group">
+            <label for="signupPhone"><span class="label-icon"></span> Phone Number</label>
+            <div class="input-wrapper">
+                <input type="tel" id="signupPhone" name="phone" placeholder="Your phone number" autocomplete="tel" required>
+                <span class="input-focus-border"></span>
+            </div>
+
         </div>
         <div class="form-group" id="codeInputGroup" style="display: none;">
             <label for="verificationCode">
@@ -177,6 +187,23 @@ include 'header.php';
         color: var(--primary-color);
         font-size: 0.85rem;
     }
+    .iti { width: 100%; }
+    .iti input { width: 100%; }
+    .iti__country-container { color: #222; }
 </style>
+
+<script src="https://cdn.jsdelivr.net/npm/intl-tel-input@29.1.0/dist/js/intlTelInput.min.js"></script>
+<script>
+    window.signupPhoneInput = null;
+    const signupPhoneElement = document.getElementById('signupPhone');
+    if (signupPhoneElement && window.intlTelInput) {
+        window.signupPhoneInput = window.intlTelInput(signupPhoneElement, {
+            initialCountry: 'lb',
+            separateDialCode: true,
+            countrySearch: true,
+            countryOrder: ['lb', 'ae', 'sa', 'qa', 'kw', 'in', 'us', 'gb']
+        });
+    }
+</script>
 
 <?php include 'footer.php'; ?>

@@ -1,19 +1,19 @@
 <?php
-// admin_login.php
-include 'header.php';
+header('Location: login.php');
+exit;
 ?>
 
 <div class="form-container admin-form">
     <div class="form-icon admin-icon-badge">👑</div>
     <h2 class="form-title" data-i18n="adminPortal">Admin Portal</h2>
     <p class="form-subtitle" data-i18n="secureAccess">Secure access to dashboard</p>
-    <form id="loginForm">
+    <form id="loginForm" data-admin-login="true">
         <div class="form-group">
             <label for="email">
                 <span class="label-icon">📧</span> <span data-i18n="adminEmail">Admin Email</span>
             </label>
             <div class="input-wrapper">
-                <input type="email" id="email" name="email" value="admin@gmail.com" readonly required>
+                <input type="email" id="email" name="email" value="<?php echo htmlspecialchars(getenv('ADMIN_EMAIL') ?: '', ENT_QUOTES, 'UTF-8'); ?>" required autocomplete="username">
                 <span class="input-focus-border admin-border"></span>
             </div>
         </div>

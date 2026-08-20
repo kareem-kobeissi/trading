@@ -8,6 +8,7 @@ error_reporting(E_ALL);
 header('Content-Type: application/json');
 
 include 'config.php';
+require_once __DIR__ . '/automation_queue.php';
 
 date_default_timezone_set('Asia/Beirut');
 $conn->query("SET time_zone = '+03:00'");
@@ -53,12 +54,26 @@ if (!$order_ref || !$name || !$email || $total_price < 0 || empty($items)) {
 // ===== GET USER ID =====
 $emailEscaped = $conn->real_escape_string($email);
 
-$userResult = $conn->query("SELECT id FROM users WHERE email = '$emailEscaped' LIMIT 1");
+$userResult = $conn->query("SELECT id, phone FROM users WHERE email = '$emailEscaped' LIMIT 1");
 
 $user_id = 0;
 
 if ($userResult && $userResult->num_rows > 0) {
-    $user_id = $userResult->fetch_assoc()['id'];
+    $userRow = $userResult->fetch_assoc();
+    $user_id = (int) $userRow['id'];
+    $savedPhone = trim((string) ($userRow['phone'] ?? ''));
+    if ($savedPhone === '') {
+        http_response_code(409);
+        echo json_encode([
+            'success' => false,
+            'code' => 'phone_verification_required',
+            'message' => 'Verify your WhatsApp number before creating an order'
+        ]);
+        exit();
+    }
+    // The verified database value is authoritative; never trust a client-side
+    // phone override when creating the order or automation payload.
+    $phone = $conn->real_escape_string($savedPhone);
 }
 
 // ===== INSERT ORDER =====
@@ -128,12 +143,51 @@ foreach ($items as $item) {
     }
 }
 
+// Build a minimal, privacy-conscious payload for the external automation.
+$productNames = [
+    'course' => 'Trading Mastery Course',
+    'ea' => 'TTR Risk Calculator EA',
+    'robot' => 'TTR Robot',
+    'robot_sr' => 'S&R Precision EA',
+    'robot_ib' => 'Instant Breakout EA',
+    'indicator' => 'The Holly Grail Indicator'
+];
+$automationItems = [];
+foreach ($items as $automationItem) {
+    $automationType = trim((string) ($automationItem['type'] ?? 'course'));
+    $automationTitle = trim((string) ($automationItem['title'] ?? ''));
+    $automationItems[] = [
+        'type' => $automationType,
+        'name' => $automationTitle !== '' ? $automationTitle : ($productNames[$automationType] ?? 'Trading Product'),
+        'price' => round((float) ($automationItem['price'] ?? 0), 2)
+    ];
+}
+
+// Delivery is handled by cron, so checkout remains fast if automation is down.
+$automationEventId = queueAutomationEvent($conn, $order_id, 'order.pending', [
+    'order' => [
+        'id' => $order_id,
+        'reference' => $order_ref,
+        'status' => 'pending',
+        'customer' => [
+            'name' => html_entity_decode($name, ENT_QUOTES, 'UTF-8'),
+            'email' => $email,
+            'phone' => html_entity_decode($phone, ENT_QUOTES, 'UTF-8')
+        ],
+        'payment_method' => $payment_method,
+        'total' => round($total_price, 2),
+        'currency' => 'USD',
+        'items' => $automationItems
+    ],
+    'owner' => ['whatsapp' => '+96171493997']
+]);
 // ===== SUCCESS =====
 echo json_encode([
     'success' => true,
     'message' => 'Order saved successfully',
     'order_id' => $order_id,
-    'order_ref' => $order_ref
+    'order_ref' => $order_ref,
+    'automation_queued' => $automationEventId !== false
 ]);
 
 $conn->close();
